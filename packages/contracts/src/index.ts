@@ -121,6 +121,7 @@ const TaskRewardTitleSchema = Type.String({ maxLength: 120 });
 const TaskPenaltyDetailSchema = Type.String({ maxLength: 300 });
 const TaskIncompleteReasonSchema = Type.String({ maxLength: 300 });
 const TaskResultSummarySchema = Type.String({ minLength: 1, maxLength: 1000 });
+const TaskGoalIdSchema = Type.String({ minLength: 1, maxLength: 64 });
 const TaskExperienceSchema = Type.Integer({ minimum: 1, maximum: 100 });
 const GrantedExperienceSchema = Type.Integer({ minimum: 0, maximum: 150 });
 const PenaltyAmountSchema = Type.Integer({ minimum: 1, maximum: 100_000 });
@@ -136,6 +137,7 @@ export const TaskSchema = Type.Object(
     id: Type.String({ minLength: 1 }),
     title: TaskTitleSchema,
     details: TaskDetailsSchema,
+    goalId: Type.Union([TaskGoalIdSchema, Type.Null()]),
     lane: TaskLaneSchema,
     form: TaskFormSchema,
     scheduledDate: DateOnlySchema,
@@ -170,6 +172,7 @@ export const TaskCreateInputSchema = Type.Object(
     form: TaskFormSchema,
     scheduledDate: DateOnlySchema,
     timeBlock: TaskTimeBlockSchema,
+    goalId: Type.Optional(TaskGoalIdSchema),
     completionMode: Type.Optional(TaskCompletionModeSchema),
     experienceReward: Type.Optional(TaskExperienceSchema),
     rewardTitle: Type.Optional(TaskRewardTitleSchema),
@@ -188,6 +191,7 @@ export const TaskUpdateInputSchema = Type.Object(
     form: Type.Optional(TaskFormSchema),
     scheduledDate: Type.Optional(DateOnlySchema),
     timeBlock: Type.Optional(TaskTimeBlockSchema),
+    goalId: Type.Optional(Type.Union([TaskGoalIdSchema, Type.Null()])),
   },
   { additionalProperties: false, minProperties: 1 },
 );
@@ -237,6 +241,7 @@ export const GoalSchema = Type.Object(
     metric: GoalMetricSchema,
     targetValue: Type.Integer({ minimum: 1, maximum: 1_000_000 }),
     currentValue: Type.Integer({ minimum: 0, maximum: 1_000_000 }),
+    linkedTaskCount: Type.Integer({ minimum: 0 }),
     targetDate: Type.Union([DateOnlySchema, Type.Null()]),
     status: GoalStatusSchema,
     createdAt: Type.String({ minLength: 1 }),

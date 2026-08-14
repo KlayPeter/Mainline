@@ -12,12 +12,17 @@ interface GoalRow {
   target_date: string | null; status: Goal["status"]; created_at: string; updated_at: string;
 }
 
+interface GoalTaskCountRow {
+  goal_id: string;
+  task_count: number;
+}
+
 function toChapter(row: ChapterRow): Chapter {
   return { id: row.id, domain: row.domain, title: row.title, description: row.description, startedOn: row.started_on, endsOn: row.ends_on, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
-function toGoal(row: GoalRow): Goal {
-  return { id: row.id, chapterId: row.chapter_id, title: row.title, definition: row.definition, metric: row.metric, targetValue: row.target_value, currentValue: row.current_value, targetDate: row.target_date, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
+function toGoal(row: GoalRow, linkedTaskCount = 0): Goal {
+  return { id: row.id, chapterId: row.chapter_id, title: row.title, definition: row.definition, metric: row.metric, targetValue: row.target_value, currentValue: row.current_value, linkedTaskCount, targetDate: row.target_date, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
 export class GoalRepository {
@@ -26,8 +31,13 @@ export class GoalRepository {
   listMap(): GoalMapResponse {
     const chapters = this.database.prepare("SELECT * FROM chapters ORDER BY status = 'active' DESC, started_on DESC, created_at DESC").all() as unknown as ChapterRow[];
     const goals = this.database.prepare("SELECT * FROM goals ORDER BY status = 'active' DESC, created_at ASC").all() as unknown as GoalRow[];
+    const taskCounts = this.database.prepare("SELECT goal_id, COUNT(*) AS task_count FROM tasks WHERE goal_id IS NOT NULL GROUP BY goal_id").all() as unknown as GoalTaskCountRow[];
+    const countByGoal = new Map(taskCounts.map((item) => [item.goal_id, item.task_count]));
     const byChapter = new Map<string, Goal[]>();
-    for (const goal of goals.map(toGoal)) byChapter.set(goal.chapterId, [...(byChapter.get(goal.chapterId) ?? []), goal]);
+    for (const row of goals) {
+      const goal = toGoal(row, countByGoal.get(row.id) ?? 0);
+      byChapter.set(goal.chapterId, [...(byChapter.get(goal.chapterId) ?? []), goal]);
+    }
     return { chapters: chapters.map((chapter): ChapterWithGoals => ({ ...toChapter(chapter), goals: byChapter.get(chapter.id) ?? [] })) };
   }
 
@@ -37,10 +47,10 @@ export class GoalRepository {
     return chapter;
   }
 
-  createGoal(goal: Goal): Goal {
+  createGoal(goal: Omit<Goal, "linkedTaskCount">): Goal {
     this.database.prepare("INSERT INTO goals (id, chapter_id, title, definition, metric, target_value, current_value, target_date, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(goal.id, goal.chapterId, goal.title, goal.definition, goal.metric, goal.targetValue, goal.currentValue, goal.targetDate, goal.status, goal.createdAt, goal.updatedAt);
-    return goal;
+    return { ...goal, linkedTaskCount: 0 };
   }
 
   findChapter(id: string): Chapter | undefined {
@@ -50,11 +60,16 @@ export class GoalRepository {
 
   findGoal(id: string): Goal | undefined {
     const row = this.database.prepare("SELECT * FROM goals WHERE id = ?").get(id) as GoalRow | undefined;
-    return row ? toGoal(row) : undefined;
+    return row ? toGoal(row, this.getLinkedTaskCount(id)) : undefined;
   }
 
   updateProgress(id: string, currentValue: number, status: Goal["status"], updatedAt: string): Goal {
     this.database.prepare("UPDATE goals SET current_value = ?, status = ?, updated_at = ? WHERE id = ?").run(currentValue, status, updatedAt, id);
     return this.findGoal(id)!;
+  }
+
+  private getLinkedTaskCount(goalId: string): number {
+    const result = this.database.prepare("SELECT COUNT(*) AS task_count FROM tasks WHERE goal_id = ?").get(goalId) as { task_count: number };
+    return result.task_count;
   }
 }

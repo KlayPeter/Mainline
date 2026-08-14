@@ -173,6 +173,17 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_007_task_goal_links",
+    apply(database) {
+      database.exec(`
+        ALTER TABLE tasks ADD COLUMN goal_id TEXT REFERENCES goals(id) ON DELETE SET NULL;
+
+        CREATE INDEX tasks_by_goal_id
+        ON tasks (goal_id, scheduled_date DESC);
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

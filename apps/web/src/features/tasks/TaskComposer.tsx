@@ -6,6 +6,7 @@ import type {
   TaskCompletionMode,
   TaskCreateInput,
   TaskForm,
+  GoalMapResponse,
   TaskLane,
   TaskPenaltyKind,
   TaskTimeBlock,
@@ -21,6 +22,7 @@ import {
   getTimeBlockLabel,
 } from "./task-presentation";
 import { TaskPlanSuggestion } from "../ai-proposals/TaskPlanSuggestion";
+import { fetchGoalMap } from "../goals/api";
 
 interface TaskComposerProps {
   defaultLane?: TaskLane;
@@ -33,6 +35,7 @@ interface TaskComposerProps {
 interface ComposerForm {
   title: string;
   details: string;
+  goalId: string;
   lane: TaskLane;
   form: TaskForm;
   scheduledDate: string;
@@ -59,6 +62,7 @@ function getInitialForm(
   return {
     title: task?.title ?? "",
     details: task?.details ?? "",
+    goalId: task?.goalId ?? "",
     lane: task?.lane ?? defaultLane ?? "side",
     form: task?.form ?? "one_off",
     scheduledDate: task?.scheduledDate ?? scheduledDate,
@@ -76,11 +80,22 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
   const [form, setForm] = useState<ComposerForm>(() => getInitialForm(task, scheduledDate, defaultLane));
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [goalMap, setGoalMap] = useState<GoalMapResponse | null>(null);
 
   useEffect(() => {
     setForm(getInitialForm(task, scheduledDate, defaultLane));
     setError(null);
   }, [defaultLane, scheduledDate, task]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void fetchGoalMap(controller.signal)
+      .then(setGoalMap)
+      .catch(() => undefined);
+
+    return () => controller.abort();
+  }, []);
 
   function updateField<Key extends keyof ComposerForm>(key: Key, value: ComposerForm[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -99,7 +114,7 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
       scheduledDate: form.scheduledDate,
       timeBlock: form.timeBlock,
     };
-    const taskInput: TaskUpdateInput = taskFields;
+    const taskInput: TaskUpdateInput = { ...taskFields, goalId: form.goalId || null };
     const input: TaskCreateInput = {
       ...taskFields,
       completionMode: form.completionMode,
@@ -107,6 +122,7 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
       rewardTitle: form.rewardTitle,
       penaltyKind: form.penaltyKind,
       penaltyDetail: form.penaltyDetail,
+      ...(form.goalId ? { goalId: form.goalId } : {}),
       ...(form.penaltyKind === "money" && form.penaltyAmount
         ? { penaltyAmount: Number(form.penaltyAmount) }
         : {}),
@@ -161,6 +177,26 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
               rows={3}
               value={form.details}
             />
+          </label>
+
+          <label className="form-field">
+            <span>关联目标（可选）</span>
+            <select onChange={(event) => updateField("goalId", event.target.value)} value={form.goalId}>
+              <option value="">暂不关联具体目标</option>
+              {goalMap?.chapters
+                .filter((chapter) => chapter.status === "active")
+                .map((chapter) => {
+                  const activeGoals = chapter.goals.filter((goal) => goal.status === "active");
+
+                  return activeGoals.length ? (
+                    <optgroup key={chapter.id} label={chapter.title}>
+                      {activeGoals.map((goal) => (
+                        <option key={goal.id} value={goal.id}>{goal.title}</option>
+                      ))}
+                    </optgroup>
+                  ) : null;
+                })}
+            </select>
           </label>
 
           {!task ? (

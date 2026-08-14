@@ -26,8 +26,10 @@ export interface MainlineAppOptions {
 export function createApp(options: MainlineAppOptions = {}) {
   const database = new LocalDatabase(options.databasePath);
   const app = Fastify({ logger: false, ...options.fastify });
-  const taskService = new TaskService(new TaskRepository(database.getConnection()));
-  const goalService = new GoalService(new GoalRepository(database.getConnection()));
+  const taskRepository = new TaskRepository(database.getConnection());
+  const goalRepository = new GoalRepository(database.getConnection());
+  const taskService = new TaskService(taskRepository, goalRepository);
+  const goalService = new GoalService(goalRepository);
   const reviewService = new ReviewService(new ReviewRepository(database.getConnection()));
   const aiProposalService = new AiProposalService(
     new AiProposalRepository(database.getConnection()),

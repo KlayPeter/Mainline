@@ -8,6 +8,7 @@ const baseTask = {
   id: "task-outcome-1",
   title: "写一份 Agent 教程",
   details: "完成教程与示例项目。",
+  goalId: null,
   lane: "side",
   form: "challenge",
   scheduledDate: "2026-08-14",

@@ -14,6 +14,7 @@ interface TaskRow {
   id: string;
   title: string;
   details: string;
+  goal_id: string | null;
   lane: Task["lane"];
   form: Task["form"];
   scheduled_date: string;
@@ -38,8 +39,9 @@ interface TaskRow {
   completed_at: string | null;
 }
 
-interface NewTask extends Omit<TaskCreateInput, "penaltyAmount"> {
+interface NewTask extends Omit<TaskCreateInput, "goalId" | "penaltyAmount"> {
   id: string;
+  goalId: string | null;
   completionMode: TaskCompletionMode;
   experienceReward: number;
   rewardTitle: string;
@@ -55,6 +57,7 @@ function toTask(row: TaskRow): Task {
     id: row.id,
     title: row.title,
     details: row.details,
+    goalId: row.goal_id,
     lane: row.lane,
     form: row.form,
     scheduledDate: row.scheduled_date,
@@ -137,19 +140,20 @@ export class TaskRepository {
       .prepare(
         `
           INSERT INTO tasks (
-            id, title, details, lane, form, scheduled_date, time_block,
+            id, title, details, goal_id, lane, form, scheduled_date, time_block,
             completion_mode, experience_reward, experience_granted,
             reward_title, reward_status,
             penalty_kind, penalty_detail, penalty_amount, penalty_status, penalty_due_at,
             result_summary, self_assessment, result_submitted_at, incomplete_reason,
             status, created_at, updated_at, completed_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 'planned', ?, ?, NULL)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 'planned', ?, ?, NULL)
         `,
       )
       .run(
         task.id,
         task.title,
         task.details,
+        task.goalId,
         task.lane,
         task.form,
         task.scheduledDate,
@@ -171,7 +175,7 @@ export class TaskRepository {
 
   update(id: string, update: TaskUpdateInput, updatedAt: string): Task {
     const assignments: string[] = [];
-    const values: string[] = [];
+    const values: Array<string | null> = [];
 
     if (update.title !== undefined) {
       assignments.push("title = ?");
@@ -181,6 +185,11 @@ export class TaskRepository {
     if (update.details !== undefined) {
       assignments.push("details = ?");
       values.push(update.details);
+    }
+
+    if (update.goalId !== undefined) {
+      assignments.push("goal_id = ?");
+      values.push(update.goalId);
     }
 
     if (update.lane !== undefined) {

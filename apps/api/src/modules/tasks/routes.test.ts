@@ -119,6 +119,47 @@ describe("task routes", () => {
     expect(listed.json()).toEqual({ tasks: [] });
   });
 
+  it("links a task to an active goal and lets the user remove that link before completing it", async () => {
+    const app = createTestApp();
+    const chapter = await app.inject({
+      method: "POST",
+      url: "/chapters",
+      payload: { domain: "learning", title: "Agent 学习", description: "完成课程和项目。", startedOn: "2026-08-14" },
+    });
+    const goal = await app.inject({
+      method: "POST",
+      url: "/goals",
+      payload: { chapterId: chapter.json().id, title: "完成 Deep Agents 课程", definition: "完成学习和项目产出。", metric: "完成模块", targetValue: 8 },
+    });
+    const goalId = goal.json().id as string;
+
+    const linked = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: { ...taskPayload, title: "学习 Deep Agents 第一节", lane: "side", goalId },
+    });
+    expect(linked.statusCode).toBe(201);
+    expect(linked.json()).toMatchObject({ goalId });
+
+    const withLinkedTask = await app.inject({ method: "GET", url: "/chapters" });
+    expect(withLinkedTask.json()).toMatchObject({ chapters: [{ goals: [{ id: goalId, linkedTaskCount: 1 }] }] });
+
+    const unlinked = await app.inject({ method: "PATCH", url: `/tasks/${linked.json().id as string}`, payload: { goalId: null } });
+    expect(unlinked.statusCode).toBe(200);
+    expect(unlinked.json()).toMatchObject({ goalId: null });
+
+    const withoutLinkedTask = await app.inject({ method: "GET", url: "/chapters" });
+    expect(withoutLinkedTask.json()).toMatchObject({ chapters: [{ goals: [{ id: goalId, linkedTaskCount: 0 }] }] });
+
+    const missingGoal = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: { ...taskPayload, title: "不应关联到不存在的目标", lane: "side", goalId: "missing-goal" },
+    });
+    expect(missingGoal.statusCode).toBe(404);
+    expect(missingGoal.json()).toEqual({ code: "TASK_NOT_FOUND", message: "没有找到要关联的目标。" });
+  });
+
   it("makes rewards claimable only after completion and aggregates granted experience", async () => {
     const app = createTestApp();
     const created = await app.inject({

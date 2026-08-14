@@ -65,7 +65,7 @@ export async function registerTaskRoutes(
     {
       schema: {
         body: TaskCreateInputSchema,
-        response: { 201: TaskSchema, 409: ApiProblemSchema, 422: ApiProblemSchema },
+        response: { 201: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema, 422: ApiProblemSchema },
       },
     },
     async (request, reply) => {

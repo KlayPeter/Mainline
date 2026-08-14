@@ -13,6 +13,7 @@ import type {
 
 import { TaskDomainError } from "./errors.js";
 import { TaskRepository } from "./repository.js";
+import { GoalRepository } from "../goals/repository.js";
 
 function getLocalDate(): string {
   const now = new Date();
@@ -41,7 +42,8 @@ function normalizeTitle(title: string): string {
   return normalized;
 }
 
-interface NormalizedTaskCreateInput extends Omit<TaskCreateInput, "penaltyAmount"> {
+interface NormalizedTaskCreateInput extends Omit<TaskCreateInput, "goalId" | "penaltyAmount"> {
+  goalId: string | null;
   completionMode: Task["completionMode"];
   experienceReward: number;
   rewardTitle: string;
@@ -55,6 +57,7 @@ function normalizeCreateInput(input: TaskCreateInput): NormalizedTaskCreateInput
   const rewardTitle = input.rewardTitle?.trim() ?? "";
   const penaltyKind = input.penaltyKind ?? "none";
   const penaltyDetail = input.penaltyDetail?.trim() ?? "";
+  const goalId = input.goalId?.trim() || null;
 
   if (penaltyKind !== "none" && !penaltyDetail) {
     throw new TaskDomainError("TASK_VALIDATION", "设置惩罚承诺时，请写清楚要如何兑现。", 422);
@@ -66,6 +69,7 @@ function normalizeCreateInput(input: TaskCreateInput): NormalizedTaskCreateInput
 
   return {
     ...input,
+    goalId,
     title: normalizeTitle(input.title),
     details: input.details.trim(),
     completionMode: input.completionMode ?? "direct",
@@ -86,11 +90,15 @@ function normalizeUpdateInput(input: TaskUpdateInput): TaskUpdateInput {
     ...input,
     ...(input.title !== undefined ? { title: normalizeTitle(input.title) } : {}),
     ...(input.details !== undefined ? { details: input.details.trim() } : {}),
+    ...(input.goalId !== undefined ? { goalId: input.goalId?.trim() || null } : {}),
   };
 }
 
 export class TaskService {
-  constructor(private readonly repository: TaskRepository) {}
+  constructor(
+    private readonly repository: TaskRepository,
+    private readonly goalRepository: GoalRepository,
+  ) {}
 
   list(query: TaskDateQuery): TaskListResponse {
     const scheduledDate = query.date ?? getLocalDate();
@@ -101,6 +109,7 @@ export class TaskService {
 
   create(input: TaskCreateInput): Task {
     const task = normalizeCreateInput(input);
+    this.assertGoalLink(task.goalId);
     this.assertMainLaneAvailable(task.lane, task.scheduledDate);
 
     const now = new Date().toISOString();
@@ -118,7 +127,9 @@ export class TaskService {
     const update = normalizeUpdateInput(input);
     const resultingLane = update.lane ?? existing.lane;
     const resultingDate = update.scheduledDate ?? existing.scheduledDate;
+    const resultingGoalId = update.goalId !== undefined ? update.goalId : existing.goalId;
 
+    this.assertGoalLink(resultingGoalId);
     this.assertMainLaneAvailable(resultingLane, resultingDate, existing.id);
     return this.repository.update(id, update, new Date().toISOString());
   }
@@ -257,6 +268,22 @@ export class TaskService {
   private assertEditable(task: Task): void {
     if (task.status !== "planned" && task.status !== "in_progress") {
       throw new TaskDomainError("TASK_CONFLICT", "已形成结果的任务不能修改。", 409);
+    }
+  }
+
+  private assertGoalLink(goalId: string | null): void {
+    if (!goalId) {
+      return;
+    }
+
+    const goal = this.goalRepository.findGoal(goalId);
+
+    if (!goal) {
+      throw new TaskDomainError("TASK_NOT_FOUND", "没有找到要关联的目标。", 404);
+    }
+
+    if (goal.status !== "active") {
+      throw new TaskDomainError("TASK_CONFLICT", "只能关联仍在进行中的目标。", 409);
     }
   }
 

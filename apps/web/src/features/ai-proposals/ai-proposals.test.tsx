@@ -92,6 +92,7 @@ describe("AI proposal UI", () => {
           id: "task-1",
           title: "完成工作需求梳理",
           details: "今天下班前给出初版。",
+          goalId: null,
           lane: "main",
           form: "one_off",
           scheduledDate: "2026-08-14",

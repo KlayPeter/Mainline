@@ -650,6 +650,7 @@ h1 {
 .goal-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .goal-row strong { font-size: .875rem; }
 .goal-row span { color: var(--faint); font-size: .75rem; }
+.goal-row small { color: var(--muted); font-size: .75rem; }
 .goal-row input { grid-row: span 2; width: 56px; color: var(--text); background: var(--surface-raised); border: 1px solid var(--line); border-radius: 6px; text-align: center; font: inherit; }
 .memory-list { display: grid; gap: 8px; margin-top: 14px; }
 .memory-list article { padding: 12px; border-left: 2px solid var(--signal); background: var(--surface); }

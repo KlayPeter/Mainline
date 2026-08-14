@@ -41,7 +41,7 @@ flowchart LR
 
 ### 主要实现
 
-- `packages/contracts/src/index.ts`：健康检查、存储状态、任务/结果/进度 DTO、请求和响应 Schema。
+- `packages/contracts/src/index.ts`：健康检查、存储状态、任务/结果/进度 DTO、任务目标归属、章节和目标 Schema。
 
 ### 主要测试
 
@@ -56,3 +56,4 @@ flowchart LR
 | 2026-08-14 | 扩展成果结算、奖励承诺与进度快照契约 | `pnpm check` |
 | 2026-08-14 | 扩展多领域章节、目标与进度契约 | `pnpm check` |
 | 2026-08-14 | 扩展每日复盘与长期记忆选择契约 | `pnpm check` |
+| 2026-08-14 | 扩展任务 `goalId` 与目标关联任务数契约 | `pnpm check` |

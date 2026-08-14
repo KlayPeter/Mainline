@@ -7,6 +7,7 @@ const plannedTask = {
   id: "task-1",
   title: "完成 Agent 课程第一节",
   details: "记录关键概念并做出一个小练习。",
+  goalId: null,
   lane: "main",
   form: "one_off",
   scheduledDate: "2026-08-14",
