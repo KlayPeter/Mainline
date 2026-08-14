@@ -233,6 +233,7 @@ h1 {
 }
 
 .primary-button,
+.danger-button,
 .text-button,
 .small-action,
 .small-icon-action {
@@ -255,7 +256,19 @@ h1 {
   font-weight: 750;
 }
 
+.danger-button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  color: #fff6f2;
+  background: var(--offline);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+
 .primary-button:disabled,
+.danger-button:disabled,
 .text-button:disabled,
 .small-action:disabled,
 .small-icon-action:disabled {
@@ -446,6 +459,12 @@ h1 {
   line-height: 1.65;
 }
 
+.task-card__content > .task-card__result {
+  color: var(--text);
+  border-left: 2px solid var(--signal);
+  padding-left: 9px;
+}
+
 .task-card__actions {
   display: flex;
   flex-wrap: wrap;
@@ -477,6 +496,19 @@ h1 {
   color: var(--muted);
   font-size: 0.8125rem;
   font-weight: 650;
+}
+
+.task-card__completed--stacked {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.task-card__minor {
+  color: var(--faint);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .composer-backdrop {
@@ -573,6 +605,109 @@ h1 {
   border-left: 2px solid var(--offline);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.commitment-settings {
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.commitment-settings summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.commitment-settings__content {
+  display: grid;
+  gap: 16px;
+  padding-top: 17px;
+}
+
+.commitment-settings__notice,
+.result-composer__notice {
+  margin: 0;
+  padding-left: 10px;
+  color: var(--faint);
+  border-left: 2px solid var(--line);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.progress-view {
+  max-width: 590px;
+}
+
+.experience-block {
+  display: grid;
+  gap: 7px;
+  margin-top: 42px;
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.experience-block span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.experience-block strong {
+  color: var(--signal);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: clamp(2.5rem, 11vw, 4rem);
+  font-weight: 650;
+  letter-spacing: -0.07em;
+  line-height: 1;
+}
+
+.progress-list {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.progress-card > div {
+  min-width: 0;
+}
+
+.progress-card svg {
+  color: var(--signal);
+}
+
+.progress-card p,
+.progress-card span {
+  display: block;
+}
+
+.progress-card p {
+  margin: 7px 0 0;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.progress-card span {
+  margin-top: 3px;
+  color: var(--faint);
+  font-size: 0.75rem;
+}
+
+.progress-card--penalty svg {
+  color: var(--offline);
 }
 
 .ai-suggestion {

@@ -1,6 +1,14 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import type { Task, TaskCreateInput, TaskUpdateInput } from "@mainline/contracts";
+import type {
+  ProgressSnapshot,
+  Task,
+  TaskCompletionMode,
+  TaskCreateInput,
+  TaskPenaltyKind,
+  TaskSelfAssessment,
+  TaskUpdateInput,
+} from "@mainline/contracts";
 
 interface TaskRow {
   id: string;
@@ -10,14 +18,34 @@ interface TaskRow {
   form: Task["form"];
   scheduled_date: string;
   time_block: Task["timeBlock"];
+  completion_mode: Task["completionMode"];
+  experience_reward: number;
+  experience_granted: number;
+  reward_title: string;
+  reward_status: Task["rewardStatus"];
+  penalty_kind: Task["penaltyKind"];
+  penalty_detail: string;
+  penalty_amount: number | null;
+  penalty_status: Task["penaltyStatus"];
+  penalty_due_at: string | null;
+  result_summary: string | null;
+  self_assessment: Task["selfAssessment"];
+  result_submitted_at: string | null;
+  incomplete_reason: string | null;
   status: Task["status"];
   created_at: string;
   updated_at: string;
   completed_at: string | null;
 }
 
-interface NewTask extends TaskCreateInput {
+interface NewTask extends Omit<TaskCreateInput, "penaltyAmount"> {
   id: string;
+  completionMode: TaskCompletionMode;
+  experienceReward: number;
+  rewardTitle: string;
+  penaltyKind: TaskPenaltyKind;
+  penaltyDetail: string;
+  penaltyAmount: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +59,20 @@ function toTask(row: TaskRow): Task {
     form: row.form,
     scheduledDate: row.scheduled_date,
     timeBlock: row.time_block,
+    completionMode: row.completion_mode,
+    experienceReward: row.experience_reward,
+    experienceGranted: row.experience_granted,
+    rewardTitle: row.reward_title,
+    rewardStatus: row.reward_status,
+    penaltyKind: row.penalty_kind,
+    penaltyDetail: row.penalty_detail,
+    penaltyAmount: row.penalty_amount,
+    penaltyStatus: row.penalty_status,
+    penaltyDueAt: row.penalty_due_at,
+    resultSummary: row.result_summary,
+    selfAssessment: row.self_assessment,
+    resultSubmittedAt: row.result_submitted_at,
+    incompleteReason: row.incomplete_reason,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -96,8 +138,12 @@ export class TaskRepository {
         `
           INSERT INTO tasks (
             id, title, details, lane, form, scheduled_date, time_block,
+            completion_mode, experience_reward, experience_granted,
+            reward_title, reward_status,
+            penalty_kind, penalty_detail, penalty_amount, penalty_status, penalty_due_at,
+            result_summary, self_assessment, result_submitted_at, incomplete_reason,
             status, created_at, updated_at, completed_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, NULL)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, 'planned', ?, ?, NULL)
         `,
       )
       .run(
@@ -108,6 +154,14 @@ export class TaskRepository {
         task.form,
         task.scheduledDate,
         task.timeBlock,
+        task.completionMode,
+        task.experienceReward,
+        task.rewardTitle,
+        task.rewardTitle ? "locked" : "none",
+        task.penaltyKind,
+        task.penaltyDetail,
+        task.penaltyAmount,
+        task.penaltyKind === "none" ? "none" : "armed",
         task.createdAt,
         task.updatedAt,
       );
@@ -162,6 +216,111 @@ export class TaskRepository {
       .run(status, completedAt, updatedAt, id);
 
     return this.findById(id)!;
+  }
+
+  complete(id: string, completedAt: string, experienceGranted: number): Task {
+    this.database
+      .prepare(
+        `
+          UPDATE tasks
+          SET status = 'completed',
+              completed_at = ?,
+              experience_granted = ?,
+              reward_status = CASE WHEN reward_status = 'locked' THEN 'available' ELSE reward_status END,
+              updated_at = ?
+          WHERE id = ?
+        `,
+      )
+      .run(completedAt, experienceGranted, completedAt, id);
+
+    return this.findById(id)!;
+  }
+
+  submitResult(
+    id: string,
+    summary: string,
+    selfAssessment: TaskSelfAssessment,
+    submittedAt: string,
+  ): Task {
+    this.database
+      .prepare(
+        `
+          UPDATE tasks
+          SET status = 'pending_resolution',
+              result_summary = ?,
+              self_assessment = ?,
+              result_submitted_at = ?,
+              updated_at = ?
+          WHERE id = ?
+        `,
+      )
+      .run(summary, selfAssessment, submittedAt, submittedAt, id);
+
+    return this.findById(id)!;
+  }
+
+  markIncomplete(id: string, reason: string | null, penaltyDueAt: string | null, updatedAt: string): Task {
+    this.database
+      .prepare(
+        `
+          UPDATE tasks
+          SET status = 'incomplete',
+              incomplete_reason = ?,
+              reward_status = CASE WHEN reward_status = 'locked' THEN 'forfeited' ELSE reward_status END,
+              penalty_status = CASE WHEN penalty_status = 'armed' THEN 'pending' ELSE penalty_status END,
+              penalty_due_at = CASE WHEN penalty_status = 'armed' THEN ? ELSE penalty_due_at END,
+              updated_at = ?
+          WHERE id = ?
+        `,
+      )
+      .run(reason, penaltyDueAt, updatedAt, id);
+
+    return this.findById(id)!;
+  }
+
+  claimReward(id: string, updatedAt: string): Task {
+    this.database
+      .prepare("UPDATE tasks SET reward_status = 'claimed', updated_at = ? WHERE id = ?")
+      .run(updatedAt, id);
+
+    return this.findById(id)!;
+  }
+
+  fulfillPenalty(id: string, updatedAt: string): Task {
+    this.database
+      .prepare("UPDATE tasks SET penalty_status = 'fulfilled', updated_at = ? WHERE id = ?")
+      .run(updatedAt, id);
+
+    return this.findById(id)!;
+  }
+
+  getProgress(): ProgressSnapshot {
+    const experienceResult = this.database
+      .prepare("SELECT COALESCE(SUM(experience_granted), 0) AS experience FROM tasks WHERE status = 'completed'")
+      .get() as { experience: number };
+    const availableRewards = this.database
+      .prepare(
+        `
+          SELECT id AS taskId, title AS taskTitle, reward_title AS rewardTitle
+          FROM tasks
+          WHERE reward_status = 'available'
+          ORDER BY completed_at DESC
+        `,
+      )
+      .all() as ProgressSnapshot["availableRewards"];
+    const pendingPenalties = this.database
+      .prepare(
+        `
+          SELECT id AS taskId, title AS taskTitle, penalty_kind AS kind,
+                 penalty_detail AS detail, penalty_amount AS amount, penalty_due_at AS dueAt
+          FROM tasks
+          WHERE penalty_status = 'pending'
+          ORDER BY penalty_due_at ASC
+        `,
+      )
+      .all() as ProgressSnapshot["pendingPenalties"];
+
+    return { experience: experienceResult.experience, availableRewards, pendingPenalties };
   }
 
   delete(id: string): void {

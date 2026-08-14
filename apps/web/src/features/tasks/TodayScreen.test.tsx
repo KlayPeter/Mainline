@@ -11,6 +11,20 @@ const plannedTask = {
   form: "one_off",
   scheduledDate: "2026-08-14",
   timeBlock: "morning",
+  completionMode: "direct",
+  experienceReward: 10,
+  experienceGranted: 0,
+  rewardTitle: "",
+  rewardStatus: "none",
+  penaltyKind: "none",
+  penaltyDetail: "",
+  penaltyAmount: null,
+  penaltyStatus: "none",
+  penaltyDueAt: null,
+  resultSummary: null,
+  selfAssessment: null,
+  resultSubmittedAt: null,
+  incompleteReason: null,
   status: "planned",
   createdAt: "2026-08-14T08:00:00.000Z",
   updatedAt: "2026-08-14T08:00:00.000Z",
@@ -26,6 +40,7 @@ describe("TodayScreen", () => {
     const completedTask = {
       ...plannedTask,
       status: "completed",
+      experienceGranted: 10,
       completedAt: "2026-08-14T09:00:00.000Z",
     } as const;
     const fetchMock = vi
@@ -42,8 +57,8 @@ describe("TodayScreen", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "完成" }));
 
-    expect(await screen.findByText(`已完成：${plannedTask.title}`)).toBeVisible();
+    expect(await screen.findByText(`已完成：${plannedTask.title}，获得 10 经验`)).toBeVisible();
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(screen.getByText("已完成", { selector: ".task-card__completed" })).toBeVisible();
+    expect(screen.getByText("已完成 · +10 经验", { selector: ".task-card__completed span" })).toBeVisible();
   });
 });

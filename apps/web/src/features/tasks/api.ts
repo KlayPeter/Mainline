@@ -1,9 +1,13 @@
 import {
   isTask,
   isTaskListResponse,
+  isProgressSnapshot,
+  type ProgressSnapshot,
   type Task,
   type TaskCreateInput,
+  type TaskIncompleteInput,
   type TaskListResponse,
+  type TaskResultSubmissionInput,
   type TaskUpdateInput,
 } from "@mainline/contracts";
 
@@ -79,6 +83,54 @@ export async function startTask(id: string): Promise<Task> {
 
 export async function completeTask(id: string): Promise<Task> {
   return readTask(await fetch(`/api/tasks/${id}/complete`, { method: "POST" }));
+}
+
+export async function submitTaskResult(id: string, input: TaskResultSubmissionInput): Promise<Task> {
+  return readTask(
+    await fetch(`/api/tasks/${id}/submit-result`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function confirmTaskResult(id: string): Promise<Task> {
+  return readTask(await fetch(`/api/tasks/${id}/confirm-result`, { method: "POST" }));
+}
+
+export async function markTaskIncomplete(id: string, input: TaskIncompleteInput): Promise<Task> {
+  return readTask(
+    await fetch(`/api/tasks/${id}/mark-incomplete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function claimTaskReward(id: string): Promise<Task> {
+  return readTask(await fetch(`/api/tasks/${id}/claim-reward`, { method: "POST" }));
+}
+
+export async function fulfillTaskPenalty(id: string): Promise<Task> {
+  return readTask(await fetch(`/api/tasks/${id}/fulfill-penalty`, { method: "POST" }));
+}
+
+export async function fetchProgress(signal?: AbortSignal): Promise<ProgressSnapshot> {
+  const response = await fetch("/api/progress", { signal });
+
+  if (!response.ok) {
+    throw new TaskApiError(await getErrorMessage(response));
+  }
+
+  const payload: unknown = await response.json();
+
+  if (!isProgressSnapshot(payload)) {
+    throw new TaskApiError("本地服务返回了无法识别的进度数据。");
+  }
+
+  return payload;
 }
 
 export async function deleteTask(id: string): Promise<void> {

@@ -1,10 +1,25 @@
 import { X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
-import type { Task, TaskCreateInput, TaskForm, TaskLane, TaskTimeBlock } from "@mainline/contracts";
+import type {
+  Task,
+  TaskCompletionMode,
+  TaskCreateInput,
+  TaskForm,
+  TaskLane,
+  TaskPenaltyKind,
+  TaskTimeBlock,
+  TaskUpdateInput,
+} from "@mainline/contracts";
 
 import { createTask, TaskApiError, updateTask } from "./api";
-import { getFormLabel, getLaneLabel, getTimeBlockLabel } from "./task-presentation";
+import {
+  getCompletionModeLabel,
+  getFormLabel,
+  getLaneLabel,
+  getPenaltyKindLabel,
+  getTimeBlockLabel,
+} from "./task-presentation";
 import { TaskPlanSuggestion } from "../ai-proposals/TaskPlanSuggestion";
 
 interface TaskComposerProps {
@@ -22,11 +37,19 @@ interface ComposerForm {
   form: TaskForm;
   scheduledDate: string;
   timeBlock: TaskTimeBlock;
+  completionMode: TaskCompletionMode;
+  experienceReward: number;
+  rewardTitle: string;
+  penaltyKind: TaskPenaltyKind;
+  penaltyDetail: string;
+  penaltyAmount: string;
 }
 
 const laneOptions: TaskLane[] = ["main", "side", "growth", "routine"];
 const formOptions: TaskForm[] = ["one_off", "routine", "challenge", "event"];
 const timeBlockOptions: TaskTimeBlock[] = ["anytime", "morning", "afternoon", "evening"];
+const completionModeOptions: TaskCompletionMode[] = ["direct", "result_report"];
+const penaltyKindOptions: TaskPenaltyKind[] = ["none", "money", "physical", "custom"];
 
 function getInitialForm(
   task: Task | undefined,
@@ -40,6 +63,12 @@ function getInitialForm(
     form: task?.form ?? "one_off",
     scheduledDate: task?.scheduledDate ?? scheduledDate,
     timeBlock: task?.timeBlock ?? "anytime",
+    completionMode: task?.completionMode ?? "direct",
+    experienceReward: task?.experienceReward ?? 10,
+    rewardTitle: task?.rewardTitle ?? "",
+    penaltyKind: task?.penaltyKind ?? "none",
+    penaltyDetail: task?.penaltyDetail ?? "",
+    penaltyAmount: task?.penaltyAmount ? String(task.penaltyAmount) : "",
   };
 }
 
@@ -62,7 +91,7 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
     setError(null);
     setIsSaving(true);
 
-    const input: TaskCreateInput = {
+    const taskFields = {
       title: form.title,
       details: form.details,
       lane: form.lane,
@@ -70,10 +99,22 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
       scheduledDate: form.scheduledDate,
       timeBlock: form.timeBlock,
     };
+    const taskInput: TaskUpdateInput = taskFields;
+    const input: TaskCreateInput = {
+      ...taskFields,
+      completionMode: form.completionMode,
+      experienceReward: form.experienceReward,
+      rewardTitle: form.rewardTitle,
+      penaltyKind: form.penaltyKind,
+      penaltyDetail: form.penaltyDetail,
+      ...(form.penaltyKind === "money" && form.penaltyAmount
+        ? { penaltyAmount: Number(form.penaltyAmount) }
+        : {}),
+    };
 
     try {
       const saved = task
-        ? await updateTask(task.id, input)
+        ? await updateTask(task.id, taskInput)
         : await createTask(input);
       onSaved(saved);
     } catch (caughtError) {
@@ -133,6 +174,33 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
             />
           ) : null}
 
+          {!task ? (
+            <div className="form-grid">
+              <label className="form-field">
+                <span>完成方式</span>
+                <select
+                  onChange={(event) => updateField("completionMode", event.target.value as TaskCompletionMode)}
+                  value={form.completionMode}
+                >
+                  {completionModeOptions.map((option) => (
+                    <option key={option} value={option}>{getCompletionModeLabel(option)}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>完成经验</span>
+                <input
+                  max={100}
+                  min={1}
+                  onChange={(event) => updateField("experienceReward", Number(event.target.value))}
+                  required
+                  type="number"
+                  value={form.experienceReward}
+                />
+              </label>
+            </div>
+          ) : null}
+
           <div className="form-grid">
             <label className="form-field">
               <span>安排日期</span>
@@ -157,6 +225,62 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
               </select>
             </label>
           </div>
+
+          {!task ? (
+            <details className="commitment-settings">
+              <summary>给自己一点回报和约束（可选）</summary>
+              <div className="commitment-settings__content">
+                <label className="form-field">
+                  <span>额外奖励</span>
+                  <input
+                    maxLength={120}
+                    onChange={(event) => updateField("rewardTitle", event.target.value)}
+                    placeholder="例如：批准玩游戏 2 小时"
+                    value={form.rewardTitle}
+                  />
+                </label>
+                <label className="form-field">
+                  <span>未完成时</span>
+                  <select
+                    onChange={(event) => updateField("penaltyKind", event.target.value as TaskPenaltyKind)}
+                    value={form.penaltyKind}
+                  >
+                    {penaltyKindOptions.map((option) => (
+                      <option key={option} value={option}>{getPenaltyKindLabel(option)}</option>
+                    ))}
+                  </select>
+                </label>
+                {form.penaltyKind !== "none" ? (
+                  <>
+                    <label className="form-field">
+                      <span>兑现方式</span>
+                      <input
+                        maxLength={300}
+                        onChange={(event) => updateField("penaltyDetail", event.target.value)}
+                        placeholder={form.penaltyKind === "money" ? "例如：转给爸妈或朋友" : "例如：完成 30 个俯卧撑"}
+                        required
+                        value={form.penaltyDetail}
+                      />
+                    </label>
+                    {form.penaltyKind === "money" ? (
+                      <label className="form-field">
+                        <span>金额（元）</span>
+                        <input
+                          max={100000}
+                          min={1}
+                          onChange={(event) => updateField("penaltyAmount", event.target.value)}
+                          required
+                          type="number"
+                          value={form.penaltyAmount}
+                        />
+                      </label>
+                    ) : null}
+                    <p className="commitment-settings__notice">若你主动结算为未完成，系统会记录一条 24 小时内待兑现的承诺。</p>
+                  </>
+                ) : null}
+              </div>
+            </details>
+          ) : null}
 
           <div className="form-grid">
             <label className="form-field">

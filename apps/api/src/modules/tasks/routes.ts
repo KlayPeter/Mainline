@@ -1,14 +1,19 @@
 import {
   ApiProblemSchema,
   NoContentSchema,
+  ProgressSnapshotSchema,
   TaskCreateInputSchema,
   TaskDateQuerySchema,
   TaskIdParamsSchema,
+  TaskIncompleteInputSchema,
   TaskListResponseSchema,
+  TaskResultSubmissionInputSchema,
   TaskSchema,
   TaskUpdateInputSchema,
   type TaskCreateInput,
   type TaskDateQuery,
+  type TaskIncompleteInput,
+  type TaskResultSubmissionInput,
   type TaskUpdateInput,
 } from "@mainline/contracts";
 import type { FastifyInstance, FastifyReply } from "fastify";
@@ -32,6 +37,12 @@ export async function registerTaskRoutes(
   app: FastifyInstance,
   options: TaskRoutesOptions,
 ): Promise<void> {
+  app.get(
+    "/progress",
+    { schema: { response: { 200: ProgressSnapshotSchema } } },
+    async () => options.service.getProgress(),
+  );
+
   app.get(
     "/tasks",
     {
@@ -120,6 +131,98 @@ export async function registerTaskRoutes(
       try {
         const { id } = request.params as { id: string };
         return options.service.complete(id);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/submit-result",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        body: TaskResultSubmissionInputSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema, 422: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.submitResult(id, request.body as TaskResultSubmissionInput);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/confirm-result",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.confirmResult(id);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/mark-incomplete",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        body: TaskIncompleteInputSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema, 422: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.markIncomplete(id, request.body as TaskIncompleteInput);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/claim-reward",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.claimReward(id);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/fulfill-penalty",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.fulfillPenalty(id);
       } catch (error) {
         return sendTaskError(error, reply);
       }

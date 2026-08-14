@@ -76,6 +76,49 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_004_task_outcomes",
+    apply(database) {
+      database.exec(`
+        ALTER TABLE tasks ADD COLUMN completion_mode TEXT NOT NULL DEFAULT 'direct'
+        CHECK (completion_mode IN ('direct', 'result_report'));
+
+        ALTER TABLE tasks ADD COLUMN experience_reward INTEGER NOT NULL DEFAULT 10
+        CHECK (experience_reward BETWEEN 1 AND 100);
+
+        ALTER TABLE tasks ADD COLUMN experience_granted INTEGER NOT NULL DEFAULT 0
+        CHECK (experience_granted BETWEEN 0 AND 150);
+
+        ALTER TABLE tasks ADD COLUMN reward_title TEXT NOT NULL DEFAULT '';
+
+        ALTER TABLE tasks ADD COLUMN reward_status TEXT NOT NULL DEFAULT 'none'
+        CHECK (reward_status IN ('none', 'locked', 'available', 'claimed', 'forfeited'));
+
+        ALTER TABLE tasks ADD COLUMN penalty_kind TEXT NOT NULL DEFAULT 'none'
+        CHECK (penalty_kind IN ('none', 'money', 'physical', 'custom'));
+
+        ALTER TABLE tasks ADD COLUMN penalty_detail TEXT NOT NULL DEFAULT '';
+
+        ALTER TABLE tasks ADD COLUMN penalty_amount INTEGER
+        CHECK (penalty_amount IS NULL OR penalty_amount BETWEEN 1 AND 100000);
+
+        ALTER TABLE tasks ADD COLUMN penalty_status TEXT NOT NULL DEFAULT 'none'
+        CHECK (penalty_status IN ('none', 'armed', 'pending', 'fulfilled', 'waived'));
+
+        ALTER TABLE tasks ADD COLUMN penalty_due_at TEXT;
+        ALTER TABLE tasks ADD COLUMN result_summary TEXT;
+
+        ALTER TABLE tasks ADD COLUMN self_assessment TEXT
+        CHECK (self_assessment IS NULL OR self_assessment IN ('basic', 'solid', 'excellent'));
+
+        ALTER TABLE tasks ADD COLUMN result_submitted_at TEXT;
+        ALTER TABLE tasks ADD COLUMN incomplete_reason TEXT;
+
+        CREATE INDEX tasks_by_reward_status ON tasks (reward_status, completed_at);
+        CREATE INDEX tasks_by_penalty_status ON tasks (penalty_status, penalty_due_at);
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

@@ -32,6 +32,9 @@ describe("task routes", () => {
     expect(created.json()).toMatchObject({
       title: taskPayload.title,
       status: "planned",
+      completionMode: "direct",
+      experienceReward: 10,
+      experienceGranted: 0,
       completedAt: null,
     });
 
@@ -50,7 +53,7 @@ describe("task routes", () => {
 
     const completed = await app.inject({ method: "POST", url: `/tasks/${taskId}/complete` });
     expect(completed.statusCode).toBe(200);
-    expect(completed.json()).toMatchObject({ status: "completed" });
+    expect(completed.json()).toMatchObject({ status: "completed", experienceGranted: 10 });
     expect(completed.json().completedAt).toEqual(expect.any(String));
 
     const listed = await app.inject({ method: "GET", url: "/tasks?date=2026-08-14" });
@@ -114,5 +117,121 @@ describe("task routes", () => {
 
     const listed = await app.inject({ method: "GET", url: "/tasks?date=2026-08-14" });
     expect(listed.json()).toEqual({ tasks: [] });
+  });
+
+  it("makes rewards claimable only after completion and aggregates granted experience", async () => {
+    const app = createTestApp();
+    const created = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: {
+        ...taskPayload,
+        rewardTitle: "批准玩游戏 2 小时",
+        experienceReward: 15,
+      },
+    });
+    const taskId = created.json().id as string;
+
+    const completed = await app.inject({ method: "POST", url: `/tasks/${taskId}/complete` });
+    expect(completed.statusCode).toBe(200);
+    expect(completed.json()).toMatchObject({
+      status: "completed",
+      experienceGranted: 15,
+      rewardStatus: "available",
+    });
+
+    const progressWithReward = await app.inject({ method: "GET", url: "/progress" });
+    expect(progressWithReward.statusCode).toBe(200);
+    expect(progressWithReward.json()).toEqual({
+      experience: 15,
+      availableRewards: [{ taskId, taskTitle: taskPayload.title, rewardTitle: "批准玩游戏 2 小时" }],
+      pendingPenalties: [],
+    });
+
+    const claimed = await app.inject({ method: "POST", url: `/tasks/${taskId}/claim-reward` });
+    expect(claimed.statusCode).toBe(200);
+    expect(claimed.json()).toMatchObject({ rewardStatus: "claimed" });
+    expect((await app.inject({ method: "GET", url: "/progress" })).json()).toMatchObject({
+      experience: 15,
+      availableRewards: [],
+    });
+  });
+
+  it("requires results for result-report tasks and creates a 24-hour self-selected penalty on incomplete work", async () => {
+    const app = createTestApp();
+    const resultTask = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: {
+        ...taskPayload,
+        title: "写一份 Agent 教程",
+        lane: "side",
+        completionMode: "result_report",
+        experienceReward: 20,
+        rewardTitle: "一瓶可乐",
+      },
+    });
+    const resultTaskId = resultTask.json().id as string;
+
+    const directCompletion = await app.inject({ method: "POST", url: `/tasks/${resultTaskId}/complete` });
+    expect(directCompletion.statusCode).toBe(409);
+
+    const submitted = await app.inject({
+      method: "POST",
+      url: `/tasks/${resultTaskId}/submit-result`,
+      payload: { summary: "完成教程大纲、示例项目和一段讲解视频。", selfAssessment: "excellent" },
+    });
+    expect(submitted.statusCode).toBe(200);
+    expect(submitted.json()).toMatchObject({
+      status: "pending_resolution",
+      selfAssessment: "excellent",
+    });
+
+    const confirmed = await app.inject({ method: "POST", url: `/tasks/${resultTaskId}/confirm-result` });
+    expect(confirmed.statusCode).toBe(200);
+    expect(confirmed.json()).toMatchObject({
+      status: "completed",
+      experienceGranted: 24,
+      rewardStatus: "available",
+    });
+
+    const incompleteTask = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: {
+        ...taskPayload,
+        title: "完成一次晚间锻炼",
+        lane: "growth",
+        rewardTitle: "无负担刷手机 2 小时",
+        penaltyKind: "physical",
+        penaltyDetail: "完成 30 个俯卧撑",
+      },
+    });
+    const incompleteTaskId = incompleteTask.json().id as string;
+
+    const markedIncomplete = await app.inject({
+      method: "POST",
+      url: `/tasks/${incompleteTaskId}/mark-incomplete`,
+      payload: { reason: "下班太晚，今天无法完成。" },
+    });
+    expect(markedIncomplete.statusCode).toBe(200);
+    expect(markedIncomplete.json()).toMatchObject({
+      status: "incomplete",
+      rewardStatus: "forfeited",
+      penaltyStatus: "pending",
+      incompleteReason: "下班太晚，今天无法完成。",
+    });
+    expect(markedIncomplete.json().penaltyDueAt).toEqual(expect.any(String));
+
+    const progressWithPenalty = await app.inject({ method: "GET", url: "/progress" });
+    expect(progressWithPenalty.json()).toMatchObject({
+      experience: 24,
+      availableRewards: [{ taskId: resultTaskId, rewardTitle: "一瓶可乐" }],
+      pendingPenalties: [{ taskId: incompleteTaskId, kind: "physical", detail: "完成 30 个俯卧撑" }],
+    });
+
+    const fulfilled = await app.inject({ method: "POST", url: `/tasks/${incompleteTaskId}/fulfill-penalty` });
+    expect(fulfilled.statusCode).toBe(200);
+    expect(fulfilled.json()).toMatchObject({ penaltyStatus: "fulfilled" });
   });
 });

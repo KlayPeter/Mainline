@@ -59,9 +59,50 @@ export const TaskStatusSchema = Type.Union([
   Type.Literal("closed"),
 ]);
 
+export const TaskCompletionModeSchema = Type.Union([
+  Type.Literal("direct"),
+  Type.Literal("result_report"),
+]);
+
+export const TaskRewardStatusSchema = Type.Union([
+  Type.Literal("none"),
+  Type.Literal("locked"),
+  Type.Literal("available"),
+  Type.Literal("claimed"),
+  Type.Literal("forfeited"),
+]);
+
+export const TaskPenaltyKindSchema = Type.Union([
+  Type.Literal("none"),
+  Type.Literal("money"),
+  Type.Literal("physical"),
+  Type.Literal("custom"),
+]);
+
+export const TaskPenaltyStatusSchema = Type.Union([
+  Type.Literal("none"),
+  Type.Literal("armed"),
+  Type.Literal("pending"),
+  Type.Literal("fulfilled"),
+  Type.Literal("waived"),
+]);
+
+export const TaskSelfAssessmentSchema = Type.Union([
+  Type.Literal("basic"),
+  Type.Literal("solid"),
+  Type.Literal("excellent"),
+]);
+
 const DateOnlySchema = Type.String({ pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" });
 const TaskTitleSchema = Type.String({ minLength: 1, maxLength: 120 });
 const TaskDetailsSchema = Type.String({ maxLength: 1000 });
+const TaskRewardTitleSchema = Type.String({ maxLength: 120 });
+const TaskPenaltyDetailSchema = Type.String({ maxLength: 300 });
+const TaskIncompleteReasonSchema = Type.String({ maxLength: 300 });
+const TaskResultSummarySchema = Type.String({ minLength: 1, maxLength: 1000 });
+const TaskExperienceSchema = Type.Integer({ minimum: 1, maximum: 100 });
+const GrantedExperienceSchema = Type.Integer({ minimum: 0, maximum: 150 });
+const PenaltyAmountSchema = Type.Integer({ minimum: 1, maximum: 100_000 });
 
 export const TaskSchema = Type.Object(
   {
@@ -72,6 +113,20 @@ export const TaskSchema = Type.Object(
     form: TaskFormSchema,
     scheduledDate: DateOnlySchema,
     timeBlock: TaskTimeBlockSchema,
+    completionMode: TaskCompletionModeSchema,
+    experienceReward: TaskExperienceSchema,
+    experienceGranted: GrantedExperienceSchema,
+    rewardTitle: TaskRewardTitleSchema,
+    rewardStatus: TaskRewardStatusSchema,
+    penaltyKind: TaskPenaltyKindSchema,
+    penaltyDetail: TaskPenaltyDetailSchema,
+    penaltyAmount: Type.Union([PenaltyAmountSchema, Type.Null()]),
+    penaltyStatus: TaskPenaltyStatusSchema,
+    penaltyDueAt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    resultSummary: Type.Union([TaskResultSummarySchema, Type.Null()]),
+    selfAssessment: Type.Union([TaskSelfAssessmentSchema, Type.Null()]),
+    resultSubmittedAt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    incompleteReason: Type.Union([TaskIncompleteReasonSchema, Type.Null()]),
     status: TaskStatusSchema,
     createdAt: Type.String({ minLength: 1 }),
     updatedAt: Type.String({ minLength: 1 }),
@@ -88,6 +143,12 @@ export const TaskCreateInputSchema = Type.Object(
     form: TaskFormSchema,
     scheduledDate: DateOnlySchema,
     timeBlock: TaskTimeBlockSchema,
+    completionMode: Type.Optional(TaskCompletionModeSchema),
+    experienceReward: Type.Optional(TaskExperienceSchema),
+    rewardTitle: Type.Optional(TaskRewardTitleSchema),
+    penaltyKind: Type.Optional(TaskPenaltyKindSchema),
+    penaltyDetail: Type.Optional(TaskPenaltyDetailSchema),
+    penaltyAmount: Type.Optional(PenaltyAmountSchema),
   },
   { additionalProperties: false },
 );
@@ -121,6 +182,51 @@ export const TaskDateQuerySchema = Type.Object(
 export const TaskListResponseSchema = Type.Object(
   {
     tasks: Type.Array(TaskSchema),
+  },
+  { additionalProperties: false },
+);
+
+export const TaskResultSubmissionInputSchema = Type.Object(
+  {
+    summary: TaskResultSummarySchema,
+    selfAssessment: TaskSelfAssessmentSchema,
+  },
+  { additionalProperties: false },
+);
+
+export const TaskIncompleteInputSchema = Type.Object(
+  {
+    reason: Type.Optional(TaskIncompleteReasonSchema),
+  },
+  { additionalProperties: false },
+);
+
+export const ProgressRewardSchema = Type.Object(
+  {
+    taskId: Type.String({ minLength: 1 }),
+    taskTitle: TaskTitleSchema,
+    rewardTitle: TaskRewardTitleSchema,
+  },
+  { additionalProperties: false },
+);
+
+export const ProgressPenaltySchema = Type.Object(
+  {
+    taskId: Type.String({ minLength: 1 }),
+    taskTitle: TaskTitleSchema,
+    kind: TaskPenaltyKindSchema,
+    detail: TaskPenaltyDetailSchema,
+    amount: Type.Union([PenaltyAmountSchema, Type.Null()]),
+    dueAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const ProgressSnapshotSchema = Type.Object(
+  {
+    experience: Type.Integer({ minimum: 0 }),
+    availableRewards: Type.Array(ProgressRewardSchema),
+    pendingPenalties: Type.Array(ProgressPenaltySchema),
   },
   { additionalProperties: false },
 );
@@ -234,10 +340,20 @@ export type TaskLane = Static<typeof TaskLaneSchema>;
 export type TaskForm = Static<typeof TaskFormSchema>;
 export type TaskTimeBlock = Static<typeof TaskTimeBlockSchema>;
 export type TaskStatus = Static<typeof TaskStatusSchema>;
+export type TaskCompletionMode = Static<typeof TaskCompletionModeSchema>;
+export type TaskRewardStatus = Static<typeof TaskRewardStatusSchema>;
+export type TaskPenaltyKind = Static<typeof TaskPenaltyKindSchema>;
+export type TaskPenaltyStatus = Static<typeof TaskPenaltyStatusSchema>;
+export type TaskSelfAssessment = Static<typeof TaskSelfAssessmentSchema>;
 export type TaskCreateInput = Static<typeof TaskCreateInputSchema>;
 export type TaskUpdateInput = Static<typeof TaskUpdateInputSchema>;
 export type TaskDateQuery = Static<typeof TaskDateQuerySchema>;
 export type TaskListResponse = Static<typeof TaskListResponseSchema>;
+export type TaskResultSubmissionInput = Static<typeof TaskResultSubmissionInputSchema>;
+export type TaskIncompleteInput = Static<typeof TaskIncompleteInputSchema>;
+export type ProgressReward = Static<typeof ProgressRewardSchema>;
+export type ProgressPenalty = Static<typeof ProgressPenaltySchema>;
+export type ProgressSnapshot = Static<typeof ProgressSnapshotSchema>;
 export type ApiProblem = Static<typeof ApiProblemSchema>;
 export type AiProposalStatus = Static<typeof AiProposalStatusSchema>;
 export type AiTaskPlanRequest = Static<typeof AiTaskPlanRequestSchema>;
@@ -274,52 +390,15 @@ export function isLocalStorageStatus(value: unknown): value is LocalStorageStatu
 }
 
 export function isTask(value: unknown): value is Task {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-
-  const candidate = value as Record<string, unknown>;
-  const validLanes = ["main", "side", "growth", "routine"];
-  const validForms = ["one_off", "routine", "challenge", "event"];
-  const validTimeBlocks = ["anytime", "morning", "afternoon", "evening"];
-  const validStatuses = [
-    "planned",
-    "in_progress",
-    "paused",
-    "interrupted",
-    "completed",
-    "incomplete",
-    "pending_resolution",
-    "abandoned",
-    "closed",
-  ];
-
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.title === "string" &&
-    typeof candidate.details === "string" &&
-    typeof candidate.lane === "string" &&
-    validLanes.includes(candidate.lane) &&
-    typeof candidate.form === "string" &&
-    validForms.includes(candidate.form) &&
-    typeof candidate.scheduledDate === "string" &&
-    typeof candidate.timeBlock === "string" &&
-    validTimeBlocks.includes(candidate.timeBlock) &&
-    typeof candidate.status === "string" &&
-    validStatuses.includes(candidate.status) &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string" &&
-    (typeof candidate.completedAt === "string" || candidate.completedAt === null)
-  );
+  return Value.Check(TaskSchema, value);
 }
 
 export function isTaskListResponse(value: unknown): value is TaskListResponse {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
+  return Value.Check(TaskListResponseSchema, value);
+}
 
-  const candidate = value as Record<string, unknown>;
-  return Array.isArray(candidate.tasks) && candidate.tasks.every(isTask);
+export function isProgressSnapshot(value: unknown): value is ProgressSnapshot {
+  return Value.Check(ProgressSnapshotSchema, value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

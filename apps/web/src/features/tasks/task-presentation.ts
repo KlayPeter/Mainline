@@ -1,4 +1,13 @@
-import type { Task, TaskForm, TaskLane, TaskStatus, TaskTimeBlock } from "@mainline/contracts";
+import type {
+  Task,
+  TaskCompletionMode,
+  TaskForm,
+  TaskLane,
+  TaskPenaltyKind,
+  TaskSelfAssessment,
+  TaskStatus,
+  TaskTimeBlock,
+} from "@mainline/contracts";
 
 const laneLabels: Record<TaskLane, string> = {
   main: "主线",
@@ -33,6 +42,24 @@ const statusLabels: Record<TaskStatus, string> = {
   closed: "已关闭",
 };
 
+const completionModeLabels: Record<TaskCompletionMode, string> = {
+  direct: "直接完成",
+  result_report: "提交成果",
+};
+
+const penaltyKindLabels: Record<TaskPenaltyKind, string> = {
+  none: "不设置",
+  money: "金钱承诺",
+  physical: "身体承诺",
+  custom: "自定义承诺",
+};
+
+const selfAssessmentLabels: Record<TaskSelfAssessment, string> = {
+  basic: "完成基础要求",
+  solid: "完成得扎实",
+  excellent: "超出预期",
+};
+
 export function getLaneLabel(lane: TaskLane): string {
   return laneLabels[lane];
 }
@@ -47,6 +74,18 @@ export function getTimeBlockLabel(timeBlock: TaskTimeBlock): string {
 
 export function getStatusLabel(status: TaskStatus): string {
   return statusLabels[status];
+}
+
+export function getCompletionModeLabel(mode: TaskCompletionMode): string {
+  return completionModeLabels[mode];
+}
+
+export function getPenaltyKindLabel(kind: TaskPenaltyKind): string {
+  return penaltyKindLabels[kind];
+}
+
+export function getSelfAssessmentLabel(assessment: TaskSelfAssessment): string {
+  return selfAssessmentLabels[assessment];
 }
 
 export function getTodayDate(): string {
@@ -64,6 +103,15 @@ export function formatTaskDate(date: string): string {
     day: "numeric",
     weekday: "short",
   }).format(new Date(`${date}T00:00:00`));
+}
+
+export function formatTaskDateTime(date: string): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(date));
 }
 
 export function getTaskMetadata(task: Task): string {

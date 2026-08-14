@@ -1,13 +1,25 @@
-import { CaretLeft, CaretRight, Check, PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Check, Gift, PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { Task, TaskLane } from "@mainline/contracts";
 
-import { completeTask, deleteTask, fetchTasks, startTask, TaskApiError } from "./api";
+import {
+  claimTaskReward,
+  completeTask,
+  confirmTaskResult,
+  deleteTask,
+  fetchTasks,
+  fulfillTaskPenalty,
+  startTask,
+  TaskApiError,
+} from "./api";
 import { InterruptionComposer } from "../ai-proposals/InterruptionComposer";
+import { IncompleteComposer } from "./IncompleteComposer";
+import { ResultComposer } from "./ResultComposer";
 import { TaskComposer } from "./TaskComposer";
 import {
   formatTaskDate,
+  formatTaskDateTime,
   getStatusLabel,
   getTaskMetadata,
   getTodayDate,
@@ -22,9 +34,14 @@ type LoadingState = "loading" | "ready" | "error";
 
 interface TaskCardProps {
   actionTaskId: string | null;
+  onClaimReward(task: Task): void;
   onComplete(task: Task): void;
+  onConfirmResult(task: Task): void;
   onDelete(task: Task): void;
   onEdit(task: Task): void;
+  onFulfillPenalty(task: Task): void;
+  onMarkIncomplete(task: Task): void;
+  onSubmitResult(task: Task): void;
   onStart(task: Task): void;
   task: Task;
 }
@@ -39,10 +56,25 @@ function shiftDate(date: string, days: number): string {
   return `${year}-${month}-${day}`;
 }
 
-function TaskCard({ actionTaskId, onComplete, onDelete, onEdit, onStart, task }: TaskCardProps) {
+function TaskCard({
+  actionTaskId,
+  onClaimReward,
+  onComplete,
+  onConfirmResult,
+  onDelete,
+  onEdit,
+  onFulfillPenalty,
+  onMarkIncomplete,
+  onSubmitResult,
+  onStart,
+  task,
+}: TaskCardProps) {
   const isActing = actionTaskId === task.id;
   const isCompleted = task.status === "completed";
-  const canComplete = task.status === "planned" || task.status === "in_progress";
+  const isActive = task.status === "planned" || task.status === "in_progress";
+  const canCompleteDirectly = isActive && task.completionMode === "direct";
+  const canSubmitResult = isActive && task.completionMode === "result_report";
+  const canResolveResult = task.status === "pending_resolution";
 
   return (
     <article className={`task-card task-card--${task.lane} ${isCompleted ? "task-card--completed" : ""}`}>
@@ -53,10 +85,41 @@ function TaskCard({ actionTaskId, onComplete, onDelete, onEdit, onStart, task }:
         </div>
         <h3>{task.title}</h3>
         {task.details ? <p>{task.details}</p> : null}
+        {task.status === "pending_resolution" && task.resultSummary ? (
+          <p className="task-card__result">已提交：{task.resultSummary}</p>
+        ) : null}
       </div>
 
       {isCompleted ? (
-        <div className="task-card__completed"><Check size={18} /> 已完成</div>
+        <div className="task-card__completed task-card__completed--stacked">
+          <span><Check size={18} /> 已完成 · +{task.experienceGranted} 经验</span>
+          {task.rewardStatus === "available" ? (
+            <button className="small-action" disabled={isActing} onClick={() => onClaimReward(task)} type="button">
+              <Gift size={16} /> 领取：{task.rewardTitle}
+            </button>
+          ) : null}
+          {task.rewardStatus === "claimed" ? <span className="task-card__minor">已领取：{task.rewardTitle}</span> : null}
+        </div>
+      ) : task.status === "incomplete" ? (
+        <div className="task-card__completed task-card__completed--stacked">
+          <span>已按未完成结算</span>
+          {task.penaltyStatus === "pending" ? (
+            <>
+              <span className="task-card__minor">待兑现：{task.penaltyDetail}{task.penaltyAmount ? `（${task.penaltyAmount} 元）` : ""}</span>
+              {task.penaltyDueAt ? <span className="task-card__minor">截止：{formatTaskDateTime(task.penaltyDueAt)}</span> : null}
+              <button className="small-action" disabled={isActing} onClick={() => onFulfillPenalty(task)} type="button">已兑现惩罚</button>
+            </>
+          ) : null}
+          {task.penaltyStatus === "fulfilled" ? <span className="task-card__minor">承诺已兑现</span> : null}
+        </div>
+      ) : canResolveResult ? (
+        <div className="task-card__actions">
+          <span className="task-card__minor">已提交成果，等你确认。</span>
+          <button className="small-action small-action--signal" disabled={isActing} onClick={() => onConfirmResult(task)} type="button">
+            <Check size={18} weight="bold" /> 算完成
+          </button>
+          <button className="small-action" disabled={isActing} onClick={() => onMarkIncomplete(task)} type="button">未完成结算</button>
+        </div>
       ) : (
         <div className="task-card__actions">
           {task.status === "planned" ? (
@@ -64,17 +127,23 @@ function TaskCard({ actionTaskId, onComplete, onDelete, onEdit, onStart, task }:
               <Play size={16} weight="fill" /> 认领
             </button>
           ) : null}
-          {canComplete ? (
+          {canCompleteDirectly ? (
             <button className="small-action small-action--signal" disabled={isActing} onClick={() => onComplete(task)} type="button">
               <Check size={18} weight="bold" /> 完成
             </button>
           ) : null}
-          <button aria-label={`编辑：${task.title}`} className="small-icon-action" disabled={isActing} onClick={() => onEdit(task)} type="button">
-            <PencilSimple size={18} />
-          </button>
-          <button aria-label={`删除：${task.title}`} className="small-icon-action" disabled={isActing} onClick={() => onDelete(task)} type="button">
-            <Trash size={18} />
-          </button>
+          {canSubmitResult ? <button className="small-action small-action--signal" disabled={isActing} onClick={() => onSubmitResult(task)} type="button">提交成果</button> : null}
+          {isActive ? (
+            <>
+              <button className="small-action" disabled={isActing} onClick={() => onMarkIncomplete(task)} type="button">未完成结算</button>
+              <button aria-label={`编辑：${task.title}`} className="small-icon-action" disabled={isActing} onClick={() => onEdit(task)} type="button">
+                <PencilSimple size={18} />
+              </button>
+              <button aria-label={`删除：${task.title}`} className="small-icon-action" disabled={isActing} onClick={() => onDelete(task)} type="button">
+                <Trash size={18} />
+              </button>
+            </>
+          ) : null}
         </div>
       )}
     </article>
@@ -90,6 +159,8 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [draftLane, setDraftLane] = useState<TaskLane | undefined>();
   const [isInterruptionOpen, setIsInterruptionOpen] = useState(false);
+  const [resultTask, setResultTask] = useState<Task | undefined>();
+  const [incompleteTask, setIncompleteTask] = useState<Task | undefined>();
 
   const loadTasks = useCallback(async (date: string, signal?: AbortSignal) => {
     setLoadingState("loading");
@@ -205,9 +276,14 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
               <>
                 <TaskCard
                   actionTaskId={actionTaskId}
-                  onComplete={(task) => void runTaskAction(task, () => completeTask(task.id), `已完成：${task.title}`)}
+                  onClaimReward={(task) => void runTaskAction(task, () => claimTaskReward(task.id), `已领取奖励：${task.rewardTitle}`)}
+                  onComplete={(task) => void runTaskAction(task, () => completeTask(task.id), `已完成：${task.title}，获得 ${task.experienceReward} 经验`)}
+                  onConfirmResult={(task) => void runTaskAction(task, () => confirmTaskResult(task.id), `已确认完成：${task.title}`)}
                   onDelete={handleDelete}
                   onEdit={setEditingTask}
+                  onFulfillPenalty={(task) => void runTaskAction(task, () => fulfillTaskPenalty(task.id), "已记录惩罚兑现。")}
+                  onMarkIncomplete={setIncompleteTask}
+                  onSubmitResult={setResultTask}
                   onStart={(task) => void runTaskAction(task, () => startTask(task.id), `已认领：${task.title}`)}
                   task={mainTask}
                 />
@@ -237,9 +313,14 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
                   <TaskCard
                     actionTaskId={actionTaskId}
                     key={task.id}
+                    onClaimReward={(currentTask) => void runTaskAction(currentTask, () => claimTaskReward(currentTask.id), `已领取奖励：${currentTask.rewardTitle}`)}
                     onComplete={(currentTask) => void runTaskAction(currentTask, () => completeTask(currentTask.id), `已完成：${currentTask.title}`)}
+                    onConfirmResult={(currentTask) => void runTaskAction(currentTask, () => confirmTaskResult(currentTask.id), `已确认完成：${currentTask.title}`)}
                     onDelete={handleDelete}
                     onEdit={setEditingTask}
+                    onFulfillPenalty={(currentTask) => void runTaskAction(currentTask, () => fulfillTaskPenalty(currentTask.id), "已记录惩罚兑现。")}
+                    onMarkIncomplete={setIncompleteTask}
+                    onSubmitResult={setResultTask}
                     onStart={(currentTask) => void runTaskAction(currentTask, () => startTask(currentTask.id), `已认领：${currentTask.title}`)}
                     task={task}
                   />
@@ -270,6 +351,28 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
           onClose={() => setIsInterruptionOpen(false)}
           onResolved={(nextMessage) => setMessage(nextMessage)}
           task={mainTask}
+        />
+      ) : null}
+
+      {resultTask ? (
+        <ResultComposer
+          onClose={() => setResultTask(undefined)}
+          onSaved={(task) => {
+            setResultTask(undefined);
+            void refreshWithMessage(`已提交成果：${task.title}。确认后才会算完成。`);
+          }}
+          task={resultTask}
+        />
+      ) : null}
+
+      {incompleteTask ? (
+        <IncompleteComposer
+          onClose={() => setIncompleteTask(undefined)}
+          onSaved={(task) => {
+            setIncompleteTask(undefined);
+            void refreshWithMessage(task.penaltyStatus === "pending" ? "已结算未完成，请在 24 小时内兑现承诺。" : "已结算为未完成。奖励和经验不会获得。");
+          }}
+          task={incompleteTask}
         />
       ) : null}
     </section>

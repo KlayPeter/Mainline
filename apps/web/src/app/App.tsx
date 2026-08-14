@@ -9,6 +9,7 @@ import {
 import { useEffect, useState, type ComponentType } from "react";
 
 import { fetchLocalHealth } from "./api";
+import { ProgressScreen } from "../features/tasks/ProgressScreen";
 import { TodayScreen } from "../features/tasks/TodayScreen";
 
 type NavigationKey = "today" | "goals" | "me";
@@ -75,7 +76,7 @@ export function App() {
   }, []);
 
   const isToday = activePage === "today";
-  const secondaryPage = isToday ? null : pageCopy[activePage];
+  const secondaryPage = isToday || activePage === "me" ? null : pageCopy[activePage];
 
   return (
     <div className="app-shell" data-theme={theme}>
@@ -104,6 +105,8 @@ export function App() {
               {connectionLabel(connectionState)}
             </div>
           </>
+        ) : activePage === "me" ? (
+          <ProgressScreen />
         ) : (
           <section aria-labelledby="secondary-page-heading" className="placeholder-view">
             <p className="section-kicker">{navigationItems.find((item) => item.key === activePage)?.label}</p>

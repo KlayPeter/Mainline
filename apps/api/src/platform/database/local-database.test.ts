@@ -21,7 +21,7 @@ describe("LocalDatabase", () => {
     expect(database.getStatus()).toEqual({
       status: "ready",
       driver: "sqlite",
-      migrationCount: 3,
+      migrationCount: 4,
     });
 
     database.close();

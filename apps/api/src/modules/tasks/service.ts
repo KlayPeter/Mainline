@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 
 import type {
+  ProgressSnapshot,
   Task,
   TaskCreateInput,
   TaskDateQuery,
+  TaskIncompleteInput,
   TaskListResponse,
+  TaskResultSubmissionInput,
   TaskUpdateInput,
 } from "@mainline/contracts";
 
@@ -38,13 +41,39 @@ function normalizeTitle(title: string): string {
   return normalized;
 }
 
-function normalizeCreateInput(input: TaskCreateInput): TaskCreateInput {
+interface NormalizedTaskCreateInput extends Omit<TaskCreateInput, "penaltyAmount"> {
+  completionMode: Task["completionMode"];
+  experienceReward: number;
+  rewardTitle: string;
+  penaltyKind: Task["penaltyKind"];
+  penaltyDetail: string;
+  penaltyAmount: number | null;
+}
+
+function normalizeCreateInput(input: TaskCreateInput): NormalizedTaskCreateInput {
   assertCalendarDate(input.scheduledDate);
+  const rewardTitle = input.rewardTitle?.trim() ?? "";
+  const penaltyKind = input.penaltyKind ?? "none";
+  const penaltyDetail = input.penaltyDetail?.trim() ?? "";
+
+  if (penaltyKind !== "none" && !penaltyDetail) {
+    throw new TaskDomainError("TASK_VALIDATION", "设置惩罚承诺时，请写清楚要如何兑现。", 422);
+  }
+
+  if (penaltyKind === "money" && input.penaltyAmount === undefined) {
+    throw new TaskDomainError("TASK_VALIDATION", "金钱惩罚请填写金额。", 422);
+  }
 
   return {
     ...input,
     title: normalizeTitle(input.title),
     details: input.details.trim(),
+    completionMode: input.completionMode ?? "direct",
+    experienceReward: input.experienceReward ?? 10,
+    rewardTitle,
+    penaltyKind,
+    penaltyDetail,
+    penaltyAmount: penaltyKind === "money" ? input.penaltyAmount ?? null : null,
   };
 }
 
@@ -115,19 +144,101 @@ export class TaskService {
       return existing;
     }
 
+    if (existing.completionMode === "result_report") {
+      throw new TaskDomainError("TASK_CONFLICT", "这项任务需要先提交成果，再确认完成。", 409);
+    }
+
     if (existing.status !== "planned" && existing.status !== "in_progress") {
       throw new TaskDomainError("TASK_CONFLICT", "当前状态不能直接完成任务。", 409);
     }
 
     const now = new Date().toISOString();
-    return this.repository.setStatus(id, "completed", now, now);
+    return this.repository.complete(id, now, existing.experienceReward);
+  }
+
+  submitResult(id: string, input: TaskResultSubmissionInput): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.completionMode !== "result_report") {
+      throw new TaskDomainError("TASK_CONFLICT", "普通任务不需要提交成果，可直接完成。", 409);
+    }
+
+    if (existing.status !== "planned" && existing.status !== "in_progress") {
+      throw new TaskDomainError("TASK_CONFLICT", "当前状态不能提交成果。", 409);
+    }
+
+    const summary = input.summary.trim();
+
+    if (!summary) {
+      throw new TaskDomainError("TASK_VALIDATION", "请写下本次任务实际产出的结果。", 422);
+    }
+
+    return this.repository.submitResult(id, summary, input.selfAssessment, new Date().toISOString());
+  }
+
+  confirmResult(id: string): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.completionMode !== "result_report" || existing.status !== "pending_resolution") {
+      throw new TaskDomainError("TASK_CONFLICT", "只有已提交成果的任务可以确认完成。", 409);
+    }
+
+    if (!existing.selfAssessment) {
+      throw new TaskDomainError("TASK_CONFLICT", "请先填写成果自评。", 409);
+    }
+
+    return this.repository.complete(
+      id,
+      new Date().toISOString(),
+      this.getExperienceForAssessment(existing.experienceReward, existing.selfAssessment),
+    );
+  }
+
+  markIncomplete(id: string, input: TaskIncompleteInput): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (!["planned", "in_progress", "pending_resolution"].includes(existing.status)) {
+      throw new TaskDomainError("TASK_CONFLICT", "当前任务不需要再按未完成结算。", 409);
+    }
+
+    const now = new Date();
+    const reason = input.reason?.trim() || null;
+    const penaltyDueAt = existing.penaltyStatus === "armed"
+      ? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
+    return this.repository.markIncomplete(id, reason, penaltyDueAt, now.toISOString());
+  }
+
+  claimReward(id: string): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.rewardStatus !== "available") {
+      throw new TaskDomainError("TASK_CONFLICT", "这条奖励现在还不能领取。", 409);
+    }
+
+    return this.repository.claimReward(id, new Date().toISOString());
+  }
+
+  fulfillPenalty(id: string): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.penaltyStatus !== "pending") {
+      throw new TaskDomainError("TASK_CONFLICT", "这条惩罚现在不需要兑现。", 409);
+    }
+
+    return this.repository.fulfillPenalty(id, new Date().toISOString());
+  }
+
+  getProgress(): ProgressSnapshot {
+    return this.repository.getProgress();
   }
 
   delete(id: string): void {
     const existing = this.getRequiredTask(id);
 
-    if (existing.status === "completed") {
-      throw new TaskDomainError("TASK_CONFLICT", "已完成任务是事实记录，不能删除。", 409);
+    if (existing.status !== "planned" && existing.status !== "in_progress") {
+      throw new TaskDomainError("TASK_CONFLICT", "已形成结果的任务是事实记录，不能删除。", 409);
     }
 
     this.repository.delete(id);
@@ -144,8 +255,8 @@ export class TaskService {
   }
 
   private assertEditable(task: Task): void {
-    if (task.status === "completed") {
-      throw new TaskDomainError("TASK_CONFLICT", "已完成任务不能修改。", 409);
+    if (task.status !== "planned" && task.status !== "in_progress") {
+      throw new TaskDomainError("TASK_CONFLICT", "已形成结果的任务不能修改。", 409);
     }
   }
 
@@ -161,5 +272,20 @@ export class TaskService {
     if (this.repository.hasActiveMainForDate(scheduledDate, excludedTaskId)) {
       throw new TaskDomainError("TASK_CONFLICT", "这一天已经有一条主线任务，请先调整原来的主线。", 409);
     }
+  }
+
+  private getExperienceForAssessment(
+    baseExperience: number,
+    assessment: NonNullable<Task["selfAssessment"]>,
+  ): number {
+    if (assessment === "basic") {
+      return Math.max(1, Math.floor(baseExperience * 0.6));
+    }
+
+    if (assessment === "excellent") {
+      return Math.min(150, Math.round(baseExperience * 1.2));
+    }
+
+    return baseExperience;
   }
 }

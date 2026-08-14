@@ -8,7 +8,7 @@
 | 02 | [本地数据基础](./02-local-data-foundation.md) | Fastify、TypeBox、SQLite、迁移和共享契约 | 01 | 已完成 |
 | 03 | [Today 与任务](./03-today-and-tasks.md) | 今日任务、CRUD、普通任务完成 | 02 | 已完成 |
 | 04 | [AI 提案与中断](./04-ai-proposals-and-interruptions.md) | DeepSeek 提案、用户确认、现实中断 | 03 | 已完成 |
-| 05 | 结果与契约 | 结果报告、经验、奖励、惩罚和待处理 | 03 | 待开始 |
+| 05 | [结果与契约](./05-outcomes-rewards-and-commitments.md) | 结果报告、经验、奖励、惩罚和待处理 | 03 | 已完成 |
 | 06 | 目标与复盘 | 章节、目标、里程碑、复盘与长期记忆 | 03、04、05 | 待开始 |
 | 07 | 本地交付质量 | 备份、PWA、通知、端到端测试和无障碍 | 02-06 | 待开始 |
 
