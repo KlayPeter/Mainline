@@ -131,6 +131,15 @@ const GoalTitleSchema = Type.String({ minLength: 1, maxLength: 120 });
 const GoalDefinitionSchema = Type.String({ maxLength: 1000 });
 const GoalMetricSchema = Type.String({ maxLength: 120 });
 const ReviewTextSchema = Type.String({ maxLength: 1500 });
+const EvidenceFilenameSchema = Type.String({ minLength: 1, maxLength: 180 });
+const EvidenceDataSchema = Type.String({ minLength: 4, maxLength: 7_000_000 });
+
+export const TaskEvidenceKindSchema = Type.Literal("penalty");
+export const TaskEvidenceMimeTypeSchema = Type.Union([
+  Type.Literal("image/jpeg"),
+  Type.Literal("image/png"),
+  Type.Literal("image/webp"),
+]);
 
 export const TaskSchema = Type.Object(
   {
@@ -344,6 +353,36 @@ export const TaskIncompleteInputSchema = Type.Object(
   { additionalProperties: false },
 );
 
+export const TaskEvidenceSchema = Type.Object(
+  {
+    id: Type.String({ minLength: 1, maxLength: 64 }),
+    taskId: Type.String({ minLength: 1, maxLength: 64 }),
+    taskTitle: TaskTitleSchema,
+    kind: TaskEvidenceKindSchema,
+    originalFilename: EvidenceFilenameSchema,
+    mimeType: TaskEvidenceMimeTypeSchema,
+    byteSize: Type.Integer({ minimum: 1, maximum: 5 * 1024 * 1024 }),
+    fileUrl: Type.String({ minLength: 1, maxLength: 180 }),
+    createdAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const TaskEvidenceCreateInputSchema = Type.Object(
+  {
+    taskId: Type.String({ minLength: 1, maxLength: 64 }),
+    filename: EvidenceFilenameSchema,
+    mimeType: TaskEvidenceMimeTypeSchema,
+    dataBase64: EvidenceDataSchema,
+  },
+  { additionalProperties: false },
+);
+
+export const TaskEvidenceListResponseSchema = Type.Object(
+  { evidence: Type.Array(TaskEvidenceSchema) },
+  { additionalProperties: false },
+);
+
 export const ProgressRewardSchema = Type.Object(
   {
     taskId: Type.String({ minLength: 1 }),
@@ -507,6 +546,10 @@ export type DailyReviewInput = Static<typeof DailyReviewInputSchema>;
 export type ReviewListResponse = Static<typeof ReviewListResponseSchema>;
 export type TaskResultSubmissionInput = Static<typeof TaskResultSubmissionInputSchema>;
 export type TaskIncompleteInput = Static<typeof TaskIncompleteInputSchema>;
+export type TaskEvidence = Static<typeof TaskEvidenceSchema>;
+export type TaskEvidenceCreateInput = Static<typeof TaskEvidenceCreateInputSchema>;
+export type TaskEvidenceListResponse = Static<typeof TaskEvidenceListResponseSchema>;
+export type TaskEvidenceMimeType = Static<typeof TaskEvidenceMimeTypeSchema>;
 export type ProgressReward = Static<typeof ProgressRewardSchema>;
 export type ProgressPenalty = Static<typeof ProgressPenaltySchema>;
 export type ProgressSnapshot = Static<typeof ProgressSnapshotSchema>;
@@ -563,6 +606,14 @@ export function isGoalMapResponse(value: unknown): value is GoalMapResponse {
 
 export function isReviewListResponse(value: unknown): value is ReviewListResponse {
   return Value.Check(ReviewListResponseSchema, value);
+}
+
+export function isTaskEvidence(value: unknown): value is TaskEvidence {
+  return Value.Check(TaskEvidenceSchema, value);
+}
+
+export function isTaskEvidenceListResponse(value: unknown): value is TaskEvidenceListResponse {
+  return Value.Check(TaskEvidenceListResponseSchema, value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

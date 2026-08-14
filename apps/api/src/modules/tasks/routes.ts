@@ -4,6 +4,9 @@ import {
   ProgressSnapshotSchema,
   TaskCreateInputSchema,
   TaskDateQuerySchema,
+  TaskEvidenceCreateInputSchema,
+  TaskEvidenceListResponseSchema,
+  TaskEvidenceSchema,
   TaskIdParamsSchema,
   TaskIncompleteInputSchema,
   TaskListResponseSchema,
@@ -12,6 +15,7 @@ import {
   TaskUpdateInputSchema,
   type TaskCreateInput,
   type TaskDateQuery,
+  type TaskEvidenceCreateInput,
   type TaskIncompleteInput,
   type TaskResultSubmissionInput,
   type TaskUpdateInput,
@@ -19,10 +23,12 @@ import {
 import type { FastifyInstance, FastifyReply } from "fastify";
 
 import { TaskDomainError } from "./errors.js";
+import type { TaskEvidenceService } from "./evidence-service.js";
 import type { TaskService } from "./service.js";
 
 interface TaskRoutesOptions {
   service: TaskService;
+  evidenceService: TaskEvidenceService;
 }
 
 function sendTaskError(error: unknown, reply: FastifyReply) {
@@ -41,6 +47,43 @@ export async function registerTaskRoutes(
     "/progress",
     { schema: { response: { 200: ProgressSnapshotSchema } } },
     async () => options.service.getProgress(),
+  );
+
+  app.get(
+    "/evidence",
+    { schema: { response: { 200: TaskEvidenceListResponseSchema } } },
+    async () => options.evidenceService.list(),
+  );
+
+  app.post(
+    "/evidence",
+    {
+      bodyLimit: 8 * 1024 * 1024,
+      schema: {
+        body: TaskEvidenceCreateInputSchema,
+        response: { 201: TaskEvidenceSchema, 404: ApiProblemSchema, 409: ApiProblemSchema, 422: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        return reply.code(201).send(options.evidenceService.create(request.body as TaskEvidenceCreateInput));
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.get(
+    "/evidence/:id/file",
+    { schema: { params: TaskIdParamsSchema, response: { 404: ApiProblemSchema } } },
+    async (request, reply) => {
+      try {
+        const evidence = options.evidenceService.read((request.params as { id: string }).id);
+        return reply.type(evidence.mimeType).send(evidence.content);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
   );
 
   app.get(

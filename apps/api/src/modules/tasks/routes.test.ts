@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../../app.js";
@@ -13,9 +16,13 @@ const taskPayload = {
 
 describe("task routes", () => {
   const apps: ReturnType<typeof createApp>[] = [];
+  const evidenceDirectories: string[] = [];
 
   afterEach(async () => {
     await Promise.all(apps.splice(0).map((app) => app.close()));
+    for (const directory of evidenceDirectories.splice(0)) {
+      rmSync(directory, { force: true, recursive: true });
+    }
   });
 
   function createTestApp() {
@@ -196,6 +203,60 @@ describe("task routes", () => {
       experience: 15,
       availableRewards: [],
     });
+  });
+
+  it("stores a selected penalty image locally and exposes it only through the local evidence route", async () => {
+    const evidenceDirectory = mkdtempSync(join(tmpdir(), "mainline-evidence-"));
+    evidenceDirectories.push(evidenceDirectory);
+    const app = createApp({ databasePath: ":memory:", evidenceDirectory });
+    apps.push(app);
+    const created = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: {
+        ...taskPayload,
+        title: "完成晚间锻炼",
+        lane: "growth",
+        penaltyKind: "physical",
+        penaltyDetail: "完成 30 个俯卧撑",
+      },
+    });
+    const taskId = created.json().id as string;
+    await app.inject({ method: "POST", url: `/tasks/${taskId}/mark-incomplete`, payload: {} });
+
+    const uploaded = await app.inject({
+      method: "POST",
+      url: "/evidence",
+      payload: {
+        taskId,
+        filename: "俯卧撑凭据.png",
+        mimeType: "image/png",
+        dataBase64: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString("base64"),
+      },
+    });
+    expect(uploaded.statusCode).toBe(201);
+    expect(uploaded.json()).toMatchObject({ taskId, taskTitle: "完成晚间锻炼", kind: "penalty", fileUrl: expect.stringContaining("/evidence/") });
+
+    const evidenceId = uploaded.json().id as string;
+    const listed = await app.inject({ method: "GET", url: "/evidence" });
+    expect(listed.json()).toMatchObject({ evidence: [{ id: evidenceId, originalFilename: "俯卧撑凭据.png" }] });
+
+    const file = await app.inject({ method: "GET", url: `/evidence/${evidenceId}/file` });
+    expect(file.statusCode).toBe(200);
+    expect(file.headers["content-type"]).toContain("image/png");
+
+    await app.inject({ method: "POST", url: `/tasks/${taskId}/fulfill-penalty` });
+    const afterFulfillment = await app.inject({
+      method: "POST",
+      url: "/evidence",
+      payload: {
+        taskId,
+        filename: "不应保存.png",
+        mimeType: "image/png",
+        dataBase64: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString("base64"),
+      },
+    });
+    expect(afterFulfillment.statusCode).toBe(409);
   });
 
   it("requires results for result-report tasks and creates a 24-hour self-selected penalty on incomplete work", async () => {

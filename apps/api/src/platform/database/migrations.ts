@@ -184,6 +184,26 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_008_task_evidence",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE task_evidence (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
+          kind TEXT NOT NULL CHECK (kind IN ('penalty')),
+          original_filename TEXT NOT NULL,
+          stored_filename TEXT NOT NULL UNIQUE,
+          mime_type TEXT NOT NULL CHECK (mime_type IN ('image/jpeg', 'image/png', 'image/webp')),
+          byte_size INTEGER NOT NULL CHECK (byte_size BETWEEN 1 AND 5242880),
+          created_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE INDEX task_evidence_by_task_and_created_at
+        ON task_evidence (task_id, created_at DESC);
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

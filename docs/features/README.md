@@ -33,6 +33,7 @@ flowchart LR
 | `apps/api/src/app.ts`、`apps/api/src/index.ts`、`apps/api/src/modules/system/**` | `local-runtime`、`local-persistence` |
 | `apps/api/src/platform/database/**` | `local-persistence` |
 | `apps/api/src/modules/tasks/**` | `task-management` |
+| `apps/api/src/platform/evidence/**` | `task-management` |
 | `apps/api/src/modules/goals/**` | `chapters-and-goals` |
 | `apps/api/src/modules/reviews/**` | `reviews-and-memory` |
 | `apps/web/src/features/tasks/**` | `task-management` |

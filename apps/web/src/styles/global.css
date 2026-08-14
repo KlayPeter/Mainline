@@ -657,6 +657,10 @@ h1 {
 .memory-list span { color: var(--faint); font-size: .75rem; }
 .memory-list p { margin: 6px 0 0; color: var(--text); font-size: .875rem; line-height: 1.55; }
 .memory-check { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .8125rem; }
+.selected-file { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-size: .8125rem; }
+.evidence-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.evidence-list a { display: grid; gap: 6px; color: var(--muted); font-size: .75rem; text-decoration: none; }
+.evidence-list img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-raised); }
 
 .experience-block {
   display: grid;

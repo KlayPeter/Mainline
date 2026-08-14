@@ -2,9 +2,14 @@ import {
   isTask,
   isTaskListResponse,
   isProgressSnapshot,
+  isTaskEvidence,
+  isTaskEvidenceListResponse,
   type ProgressSnapshot,
   type Task,
   type TaskCreateInput,
+  type TaskEvidence,
+  type TaskEvidenceCreateInput,
+  type TaskEvidenceListResponse,
   type TaskIncompleteInput,
   type TaskListResponse,
   type TaskResultSubmissionInput,
@@ -128,6 +133,42 @@ export async function fetchProgress(signal?: AbortSignal): Promise<ProgressSnaps
 
   if (!isProgressSnapshot(payload)) {
     throw new TaskApiError("本地服务返回了无法识别的进度数据。");
+  }
+
+  return payload;
+}
+
+export async function fetchTaskEvidence(signal?: AbortSignal): Promise<TaskEvidenceListResponse> {
+  const response = await fetch("/api/evidence", { signal });
+
+  if (!response.ok) {
+    throw new TaskApiError(await getErrorMessage(response));
+  }
+
+  const payload: unknown = await response.json();
+
+  if (!isTaskEvidenceListResponse(payload)) {
+    throw new TaskApiError("本地服务返回了无法识别的凭据数据。");
+  }
+
+  return payload;
+}
+
+export async function uploadTaskEvidence(input: TaskEvidenceCreateInput): Promise<TaskEvidence> {
+  const response = await fetch("/api/evidence", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new TaskApiError(await getErrorMessage(response));
+  }
+
+  const payload: unknown = await response.json();
+
+  if (!isTaskEvidence(payload)) {
+    throw new TaskApiError("本地服务返回了无法识别的凭据记录。");
   }
 
   return payload;

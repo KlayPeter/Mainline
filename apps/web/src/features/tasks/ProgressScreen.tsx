@@ -1,9 +1,10 @@
-import { Check, Gift, Warning } from "@phosphor-icons/react";
+import { Gift, Warning } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
-import type { ProgressSnapshot } from "@mainline/contracts";
+import type { ProgressPenalty, ProgressSnapshot, TaskEvidence } from "@mainline/contracts";
 
-import { claimTaskReward, fetchProgress, fulfillTaskPenalty, TaskApiError } from "./api";
+import { claimTaskReward, fetchProgress, fetchTaskEvidence, fulfillTaskPenalty, TaskApiError } from "./api";
+import { PenaltyEvidenceComposer } from "./PenaltyEvidenceComposer";
 import { formatTaskDateTime } from "./task-presentation";
 import { ReviewPanel } from "../reviews/ReviewPanel";
 
@@ -14,12 +15,16 @@ export function ProgressScreen() {
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [actionTaskId, setActionTaskId] = useState<string | null>(null);
+  const [evidence, setEvidence] = useState<TaskEvidence[]>([]);
+  const [penaltyForEvidence, setPenaltyForEvidence] = useState<ProgressPenalty | null>(null);
 
   const loadProgress = useCallback(async (signal?: AbortSignal) => {
     setLoadingState("loading");
 
     try {
-      setProgress(await fetchProgress(signal));
+      const [nextProgress, evidenceResponse] = await Promise.all([fetchProgress(signal), fetchTaskEvidence(signal)]);
+      setProgress(nextProgress);
+      setEvidence(evidenceResponse.evidence);
       setLoadingState("ready");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -38,7 +43,7 @@ export function ProgressScreen() {
     return () => controller.abort();
   }, [loadProgress]);
 
-  async function runAction(taskId: string, action: () => Promise<unknown>, successMessage: string) {
+  async function runAction(taskId: string, action: () => Promise<unknown>, successMessage: string): Promise<boolean> {
     setActionTaskId(taskId);
     setMessage(null);
 
@@ -46,8 +51,10 @@ export function ProgressScreen() {
       await action();
       await loadProgress();
       setMessage(successMessage);
+      return true;
     } catch (error) {
       setMessage(error instanceof TaskApiError ? error.message : "这次操作没有完成，请稍后再试。");
+      return false;
     } finally {
       setActionTaskId(null);
     }
@@ -98,14 +105,29 @@ export function ProgressScreen() {
                 {progress.pendingPenalties.map((penalty) => (
                   <article className="progress-card progress-card--penalty" key={penalty.taskId}>
                     <div><Warning size={18} /><p>{penalty.detail}{penalty.amount ? `（${penalty.amount} 元）` : ""}</p><span>来自：{penalty.taskTitle} · 截止：{formatTaskDateTime(penalty.dueAt)}</span></div>
-                    <button className="small-action" disabled={actionTaskId === penalty.taskId} onClick={() => void runAction(penalty.taskId, () => fulfillTaskPenalty(penalty.taskId), "已记录承诺兑现。") } type="button"><Check size={16} /> 已兑现</button>
+                    <button className="small-action" disabled={actionTaskId === penalty.taskId} onClick={() => setPenaltyForEvidence(penalty)} type="button">留凭据并兑现</button>
                   </article>
                 ))}
               </div>
             ) : <p className="task-state">暂时没有待兑现承诺。</p>}
           </section>
+
+          {evidence.length ? (
+            <section aria-labelledby="evidence-heading" className="task-section">
+              <div className="section-heading"><h2 id="evidence-heading">已留存凭据</h2><span>{evidence.length} 份</span></div>
+              <div className="evidence-list">
+                {evidence.map((item) => (
+                  <a href={`/api${item.fileUrl}`} key={item.id} rel="noreferrer" target="_blank">
+                    <img alt={`${item.taskTitle}的惩罚凭据`} loading="lazy" src={`/api${item.fileUrl}`} />
+                    <span>{item.taskTitle}</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </>
       ) : null}
+      {penaltyForEvidence ? <PenaltyEvidenceComposer onClose={() => setPenaltyForEvidence(null)} onFulfilled={() => runAction(penaltyForEvidence.taskId, () => fulfillTaskPenalty(penaltyForEvidence.taskId), "已记录承诺兑现。")} taskId={penaltyForEvidence.taskId} taskTitle={penaltyForEvidence.taskTitle} /> : null}
     </section>
   );
 }
