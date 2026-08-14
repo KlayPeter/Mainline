@@ -13,7 +13,7 @@ describe("App shell", () => {
 
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "把这一刻，交给最重要的一步。" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "今天，只留一条主线。" })).toBeVisible();
     expect(screen.getByRole("button", { name: "今天" })).toBeVisible();
     expect(screen.getByRole("button", { name: "目标" })).toBeVisible();
     expect(screen.getByRole("button", { name: "记录" })).toBeVisible();

@@ -41,7 +41,7 @@ flowchart LR
 
 ### 主要实现
 
-- `packages/contracts/src/index.ts`：健康检查、存储状态与后续领域契约。
+- `packages/contracts/src/index.ts`：健康检查、存储状态、任务 DTO、请求和响应 Schema。
 
 ### 主要测试
 
@@ -52,3 +52,4 @@ flowchart LR
 | 日期 | 变更 | 验证 |
 | --- | --- | --- |
 | 2026-08-14 | 完成健康检查与存储状态 TypeBox 契约 | `pnpm check` |
+| 2026-08-14 | 完成任务 API TypeBox 契约 | `pnpm check` |

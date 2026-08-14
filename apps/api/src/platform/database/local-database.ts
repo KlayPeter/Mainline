@@ -44,6 +44,10 @@ export class LocalDatabase {
     };
   }
 
+  getConnection(): DatabaseSync {
+    return this.#connection;
+  }
+
   close(): void {
     this.#connection.close();
   }

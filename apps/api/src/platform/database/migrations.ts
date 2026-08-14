@@ -21,6 +21,43 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_002_tasks",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE tasks (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          details TEXT NOT NULL,
+          lane TEXT NOT NULL CHECK (lane IN ('main', 'side', 'growth', 'routine')),
+          form TEXT NOT NULL CHECK (form IN ('one_off', 'routine', 'challenge', 'event')),
+          scheduled_date TEXT NOT NULL,
+          time_block TEXT NOT NULL CHECK (time_block IN ('anytime', 'morning', 'afternoon', 'evening')),
+          status TEXT NOT NULL CHECK (status IN (
+            'planned',
+            'in_progress',
+            'paused',
+            'interrupted',
+            'completed',
+            'incomplete',
+            'pending_resolution',
+            'abandoned',
+            'closed'
+          )),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          completed_at TEXT
+        ) STRICT;
+
+        CREATE INDEX tasks_by_scheduled_date
+        ON tasks (scheduled_date, time_block, created_at);
+
+        CREATE UNIQUE INDEX tasks_one_active_main_per_day
+        ON tasks (scheduled_date)
+        WHERE lane = 'main' AND status IN ('planned', 'in_progress');
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

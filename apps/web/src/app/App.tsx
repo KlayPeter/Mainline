@@ -9,13 +9,15 @@ import {
 import { useEffect, useState, type ComponentType } from "react";
 
 import { fetchLocalHealth } from "./api";
+import { TodayScreen } from "../features/tasks/TodayScreen";
 
-type NavigationKey = "today" | "goals" | "add" | "me";
+type NavigationKey = "today" | "goals" | "me";
+type NavigationAction = NavigationKey | "record";
 type ConnectionState = "checking" | "ready" | "offline";
 type Theme = "dark" | "light";
 
 interface NavigationItem {
-  key: NavigationKey;
+  key: NavigationAction;
   label: string;
   icon: ComponentType<{ size?: number; weight?: "regular" | "fill" }>;
 }
@@ -23,7 +25,7 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   { key: "today", label: "今天", icon: House },
   { key: "goals", label: "目标", icon: Compass },
-  { key: "add", label: "记录", icon: Plus },
+  { key: "record", label: "记录", icon: Plus },
   { key: "me", label: "我的", icon: UserCircle },
 ];
 
@@ -31,10 +33,6 @@ const pageCopy: Record<Exclude<NavigationKey, "today">, { title: string; body: s
   goals: {
     title: "目标还在整理中",
     body: "下一阶段会在这里呈现你的章节、主线与支线。",
-  },
-  add: {
-    title: "把事情留下来",
-    body: "任务录入将在下一阶段开放；它会先由你决定，再由 AI 提供建议。",
   },
   me: {
     title: "你的存档",
@@ -58,6 +56,7 @@ export function App() {
   const [activePage, setActivePage] = useState<NavigationKey>("today");
   const [connectionState, setConnectionState] = useState<ConnectionState>("checking");
   const [theme, setTheme] = useState<Theme>("dark");
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,27 +97,13 @@ export function App() {
 
       <main className="content" id="main-content">
         {isToday ? (
-          <section aria-labelledby="today-heading" className="today-view">
-            <p className="section-kicker">今天</p>
-            <h1 id="today-heading">把这一刻，交给最重要的一步。</h1>
-            <p className="lede">
-              这里不会替你决定人生。它只帮你看清今天，并留下真实的推进。
-            </p>
-
-            <section aria-label="今日任务状态" className="quiet-panel">
-              <span className="panel-index">01</span>
-              <div>
-                <p className="panel-label">今日面板</p>
-                <h2>还没有安排</h2>
-                <p>建立任务后，你会在这里看到主线、支线与可以完成的一步。</p>
-              </div>
-            </section>
-
+          <>
+            <TodayScreen isComposerOpen={isComposerOpen} onComposerOpenChange={setIsComposerOpen} />
             <div aria-live="polite" className={`connection connection--${connectionState}`}>
               <span aria-hidden="true" className="connection-dot" />
               {connectionLabel(connectionState)}
             </div>
-          </section>
+          </>
         ) : (
           <section aria-labelledby="secondary-page-heading" className="placeholder-view">
             <p className="section-kicker">{navigationItems.find((item) => item.key === activePage)?.label}</p>
@@ -138,7 +123,16 @@ export function App() {
               aria-current={isActive ? "page" : undefined}
               className={`navigation-item ${isActive ? "navigation-item--active" : ""}`}
               key={item.key}
-              onClick={() => setActivePage(item.key)}
+              onClick={() => {
+                if (item.key === "record") {
+                  setActivePage("today");
+                  setIsComposerOpen(true);
+                  return;
+                }
+
+                setActivePage(item.key);
+                setIsComposerOpen(false);
+              }}
               type="button"
             >
               <Icon size={22} weight={isActive ? "fill" : "regular"} />

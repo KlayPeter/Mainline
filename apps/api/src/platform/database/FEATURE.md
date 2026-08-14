@@ -48,6 +48,7 @@ flowchart LR
 
 - `apps/api/src/platform/database/local-database.ts`：SQLite 连接、路径解析和状态读取。
 - `apps/api/src/platform/database/migrations.ts`：最小迁移清单及其执行器。
+- `apps/api/src/modules/tasks/repository.ts`：第一个领域 Repository，在此 Adapter 连接上执行任务 SQL。
 - `apps/api/src/app.ts`：应用生命周期中创建并关闭本地数据库。
 - `apps/api/src/modules/system/routes.ts`：只读存储状态接口。
 - `packages/contracts/src/index.ts`：存储状态响应契约。
@@ -62,3 +63,4 @@ flowchart LR
 | 日期 | 变更 | 验证 |
 | --- | --- | --- |
 | 2026-08-14 | 建立本地 SQLite 与迁移基础 | `pnpm check` |
+| 2026-08-14 | 新增任务表与单日有效主线唯一索引 | `pnpm check` |
