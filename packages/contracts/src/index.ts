@@ -134,6 +134,7 @@ const ReviewTextSchema = Type.String({ maxLength: 1500 });
 const EvidenceFilenameSchema = Type.String({ minLength: 1, maxLength: 180 });
 const EvidenceDataSchema = Type.String({ minLength: 4, maxLength: 7_000_000 });
 const ReminderTimeSchema = Type.String({ pattern: "^[0-2][0-9]:[0-5][0-9]$" });
+const TaskInterruptionReasonSchema = Type.String({ minLength: 1, maxLength: 300 });
 const LifeStateTitleSchema = Type.String({ maxLength: 80 });
 const LifeStateDescriptionSchema = Type.String({ maxLength: 600 });
 const OnboardingNotesSchema = Type.String({ maxLength: 1_000 });
@@ -169,6 +170,10 @@ export const TaskSchema = Type.Object(
     selfAssessment: Type.Union([TaskSelfAssessmentSchema, Type.Null()]),
     resultSubmittedAt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
     incompleteReason: Type.Union([TaskIncompleteReasonSchema, Type.Null()]),
+    startedAt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    activeStartedAt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    focusSeconds: Type.Integer({ minimum: 0 }),
+    interruptionCount: Type.Integer({ minimum: 0 }),
     status: TaskStatusSchema,
     createdAt: Type.String({ minLength: 1 }),
     updatedAt: Type.String({ minLength: 1 }),
@@ -353,6 +358,13 @@ export const TaskResultSubmissionInputSchema = Type.Object(
 export const TaskIncompleteInputSchema = Type.Object(
   {
     reason: Type.Optional(TaskIncompleteReasonSchema),
+  },
+  { additionalProperties: false },
+);
+
+export const TaskInterruptionInputSchema = Type.Object(
+  {
+    reason: TaskInterruptionReasonSchema,
   },
   { additionalProperties: false },
 );
@@ -602,6 +614,7 @@ export type DailyReviewInput = Static<typeof DailyReviewInputSchema>;
 export type ReviewListResponse = Static<typeof ReviewListResponseSchema>;
 export type TaskResultSubmissionInput = Static<typeof TaskResultSubmissionInputSchema>;
 export type TaskIncompleteInput = Static<typeof TaskIncompleteInputSchema>;
+export type TaskInterruptionInput = Static<typeof TaskInterruptionInputSchema>;
 export type TaskEvidence = Static<typeof TaskEvidenceSchema>;
 export type TaskEvidenceCreateInput = Static<typeof TaskEvidenceCreateInputSchema>;
 export type TaskEvidenceListResponse = Static<typeof TaskEvidenceListResponseSchema>;

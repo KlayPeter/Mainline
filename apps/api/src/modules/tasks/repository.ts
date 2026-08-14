@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { randomUUID } from "node:crypto";
 
 import type {
   ProgressSnapshot,
@@ -33,6 +34,10 @@ interface TaskRow {
   self_assessment: Task["selfAssessment"];
   result_submitted_at: string | null;
   incomplete_reason: string | null;
+  started_at: string | null;
+  active_started_at: string | null;
+  focus_seconds: number;
+  interruption_count: number;
   status: Task["status"];
   created_at: string;
   updated_at: string;
@@ -76,6 +81,10 @@ function toTask(row: TaskRow): Task {
     selfAssessment: row.self_assessment,
     resultSubmittedAt: row.result_submitted_at,
     incompleteReason: row.incomplete_reason,
+    startedAt: row.started_at,
+    activeStartedAt: row.active_started_at,
+    focusSeconds: row.focus_seconds,
+    interruptionCount: row.interruption_count,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -125,7 +134,7 @@ export class TaskRepository {
           SELECT 1 FROM tasks
           WHERE scheduled_date = ?
             AND lane = 'main'
-            AND status IN ('planned', 'in_progress')
+            AND status IN ('planned', 'in_progress', 'paused', 'interrupted', 'pending_resolution')
             AND (? IS NULL OR id != ?)
           LIMIT 1
         `,
@@ -219,28 +228,70 @@ export class TaskRepository {
     return this.findById(id)!;
   }
 
-  setStatus(id: string, status: Task["status"], completedAt: string | null, updatedAt: string): Task {
+  start(id: string, startedAt: string): Task {
     this.database
-      .prepare("UPDATE tasks SET status = ?, completed_at = ?, updated_at = ? WHERE id = ?")
-      .run(status, completedAt, updatedAt, id);
+      .prepare(`
+        UPDATE tasks
+        SET status = 'in_progress',
+            started_at = COALESCE(started_at, ?),
+            active_started_at = ?,
+            updated_at = ?
+        WHERE id = ?
+      `)
+      .run(startedAt, startedAt, startedAt, id);
 
     return this.findById(id)!;
   }
 
-  complete(id: string, completedAt: string, experienceGranted: number): Task {
+  pause(id: string, focusSeconds: number, pausedAt: string): Task {
+    this.database
+      .prepare(`
+        UPDATE tasks
+        SET status = 'paused', active_started_at = NULL, focus_seconds = ?, updated_at = ?
+        WHERE id = ?
+      `)
+      .run(focusSeconds, pausedAt, id);
+    this.addExecutionEvent(id, "paused", null, pausedAt);
+    return this.findById(id)!;
+  }
+
+  resume(id: string, resumedAt: string): Task {
+    this.database
+      .prepare("UPDATE tasks SET status = 'in_progress', active_started_at = ?, updated_at = ? WHERE id = ?")
+      .run(resumedAt, resumedAt, id);
+    this.addExecutionEvent(id, "resumed", null, resumedAt);
+    return this.findById(id)!;
+  }
+
+  interrupt(id: string, reason: string, focusSeconds: number, interruptedAt: string): Task {
+    this.database
+      .prepare(`
+        UPDATE tasks
+        SET status = 'interrupted', active_started_at = NULL, focus_seconds = ?,
+            interruption_count = interruption_count + 1, updated_at = ?
+        WHERE id = ?
+      `)
+      .run(focusSeconds, interruptedAt, id);
+    this.addExecutionEvent(id, "interrupted", reason, interruptedAt);
+    return this.findById(id)!;
+  }
+
+  complete(id: string, completedAt: string, experienceGranted: number, focusSeconds: number): Task {
     this.database
       .prepare(
         `
           UPDATE tasks
           SET status = 'completed',
               completed_at = ?,
+              active_started_at = NULL,
+              focus_seconds = ?,
               experience_granted = ?,
               reward_status = CASE WHEN reward_status = 'locked' THEN 'available' ELSE reward_status END,
               updated_at = ?
           WHERE id = ?
         `,
       )
-      .run(completedAt, experienceGranted, completedAt, id);
+      .run(completedAt, focusSeconds, experienceGranted, completedAt, id);
 
     return this.findById(id)!;
   }
@@ -250,6 +301,7 @@ export class TaskRepository {
     summary: string,
     selfAssessment: TaskSelfAssessment,
     submittedAt: string,
+    focusSeconds: number,
   ): Task {
     this.database
       .prepare(
@@ -259,16 +311,18 @@ export class TaskRepository {
               result_summary = ?,
               self_assessment = ?,
               result_submitted_at = ?,
+              active_started_at = NULL,
+              focus_seconds = ?,
               updated_at = ?
           WHERE id = ?
         `,
       )
-      .run(summary, selfAssessment, submittedAt, submittedAt, id);
+      .run(summary, selfAssessment, submittedAt, focusSeconds, submittedAt, id);
 
     return this.findById(id)!;
   }
 
-  markIncomplete(id: string, reason: string | null, penaltyDueAt: string | null, updatedAt: string): Task {
+  markIncomplete(id: string, reason: string | null, penaltyDueAt: string | null, updatedAt: string, focusSeconds: number): Task {
     this.database
       .prepare(
         `
@@ -278,11 +332,13 @@ export class TaskRepository {
               reward_status = CASE WHEN reward_status = 'locked' THEN 'forfeited' ELSE reward_status END,
               penalty_status = CASE WHEN penalty_status = 'armed' THEN 'pending' ELSE penalty_status END,
               penalty_due_at = CASE WHEN penalty_status = 'armed' THEN ? ELSE penalty_due_at END,
+              active_started_at = NULL,
+              focus_seconds = ?,
               updated_at = ?
           WHERE id = ?
         `,
       )
-      .run(reason, penaltyDueAt, updatedAt, id);
+      .run(reason, penaltyDueAt, focusSeconds, updatedAt, id);
 
     return this.findById(id)!;
   }
@@ -334,5 +390,16 @@ export class TaskRepository {
 
   delete(id: string): void {
     this.database.prepare("DELETE FROM tasks WHERE id = ?").run(id);
+  }
+
+  private addExecutionEvent(
+    taskId: string,
+    kind: "paused" | "resumed" | "interrupted",
+    reason: string | null,
+    occurredAt: string,
+  ): void {
+    this.database
+      .prepare("INSERT INTO task_execution_events (id, task_id, kind, reason, occurred_at) VALUES (?, ?, ?, ?, ?)")
+      .run(randomUUID(), taskId, kind, reason, occurredAt);
   }
 }

@@ -32,7 +32,7 @@ describe("local API", () => {
     expect(response.json()).toEqual({
       status: "ready",
       driver: "sqlite",
-      migrationCount: 10,
+      migrationCount: 11,
     });
   });
 
@@ -49,6 +49,7 @@ describe("local API", () => {
       version: 1,
       data: {
         tasks: [],
+        taskExecutionEvents: [],
         chapters: [],
         goals: [],
         dailyReviews: [],

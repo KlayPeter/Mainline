@@ -90,6 +90,24 @@ export async function completeTask(id: string): Promise<Task> {
   return readTask(await fetch(`/api/tasks/${id}/complete`, { method: "POST" }));
 }
 
+export async function pauseTask(id: string): Promise<Task> {
+  return readTask(await fetch(`/api/tasks/${id}/pause`, { method: "POST" }));
+}
+
+export async function resumeTask(id: string): Promise<Task> {
+  return readTask(await fetch(`/api/tasks/${id}/resume`, { method: "POST" }));
+}
+
+export async function recordTaskInterruption(id: string, reason: string): Promise<Task> {
+  return readTask(
+    await fetch(`/api/tasks/${id}/interrupt`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reason }),
+    }),
+  );
+}
+
 export async function submitTaskResult(id: string, input: TaskResultSubmissionInput): Promise<Task> {
   return readTask(
     await fetch(`/api/tasks/${id}/submit-result`, {

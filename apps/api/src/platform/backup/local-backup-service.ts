@@ -19,6 +19,7 @@ export interface LocalBackupDocument {
   exportedAt: string;
   data: {
     tasks: unknown[];
+    taskExecutionEvents: unknown[];
     chapters: unknown[];
     goals: unknown[];
     dailyReviews: unknown[];
@@ -56,6 +57,7 @@ export class LocalBackupService {
       exportedAt: new Date().toISOString(),
       data: {
         tasks: this.database.prepare("SELECT * FROM tasks ORDER BY created_at ASC").all() as unknown[],
+        taskExecutionEvents: this.database.prepare("SELECT * FROM task_execution_events ORDER BY occurred_at ASC").all() as unknown[],
         chapters: this.database.prepare("SELECT * FROM chapters ORDER BY created_at ASC").all() as unknown[],
         goals: this.database.prepare("SELECT * FROM goals ORDER BY created_at ASC").all() as unknown[],
         dailyReviews: this.database.prepare("SELECT * FROM daily_reviews ORDER BY date ASC").all() as unknown[],

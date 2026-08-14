@@ -9,6 +9,7 @@ import {
   TaskEvidenceSchema,
   TaskIdParamsSchema,
   TaskIncompleteInputSchema,
+  TaskInterruptionInputSchema,
   TaskListResponseSchema,
   TaskResultSubmissionInputSchema,
   TaskSchema,
@@ -17,6 +18,7 @@ import {
   type TaskDateQuery,
   type TaskEvidenceCreateInput,
   type TaskIncompleteInput,
+  type TaskInterruptionInput,
   type TaskResultSubmissionInput,
   type TaskUpdateInput,
 } from "@mainline/contracts";
@@ -174,6 +176,61 @@ export async function registerTaskRoutes(
       try {
         const { id } = request.params as { id: string };
         return options.service.complete(id);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/pause",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.pause(id);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/resume",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.resume(id);
+      } catch (error) {
+        return sendTaskError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    "/tasks/:id/interrupt",
+    {
+      schema: {
+        params: TaskIdParamsSchema,
+        body: TaskInterruptionInputSchema,
+        response: { 200: TaskSchema, 404: ApiProblemSchema, 409: ApiProblemSchema, 422: ApiProblemSchema },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        return options.service.interrupt(id, request.body as TaskInterruptionInput);
       } catch (error) {
         return sendTaskError(error, reply);
       }

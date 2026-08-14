@@ -252,6 +252,34 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_011_task_execution",
+    apply(database) {
+      database.exec(`
+        ALTER TABLE tasks ADD COLUMN started_at TEXT;
+        ALTER TABLE tasks ADD COLUMN active_started_at TEXT;
+        ALTER TABLE tasks ADD COLUMN focus_seconds INTEGER NOT NULL DEFAULT 0 CHECK (focus_seconds >= 0);
+        ALTER TABLE tasks ADD COLUMN interruption_count INTEGER NOT NULL DEFAULT 0 CHECK (interruption_count >= 0);
+
+        CREATE TABLE task_execution_events (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
+          kind TEXT NOT NULL CHECK (kind IN ('paused', 'resumed', 'interrupted')),
+          reason TEXT,
+          occurred_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE INDEX task_execution_events_by_task_and_time
+        ON task_execution_events (task_id, occurred_at DESC);
+
+        DROP INDEX tasks_one_active_main_per_day;
+
+        CREATE INDEX tasks_one_active_main_per_day
+        ON tasks (scheduled_date)
+        WHERE lane = 'main' AND status IN ('planned', 'in_progress', 'paused', 'interrupted', 'pending_resolution');
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

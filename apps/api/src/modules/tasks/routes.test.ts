@@ -69,6 +69,47 @@ describe("task routes", () => {
     expect(listed.json().tasks[0]).toMatchObject({ id: taskId, status: "completed" });
   });
 
+  it("keeps focused time and interruption facts when a task is paused, resumed, and interrupted", async () => {
+    const app = createTestApp();
+    const created = await app.inject({
+      method: "POST",
+      url: "/tasks",
+      payload: { ...taskPayload, title: "完成 Agent 课程练习", lane: "side" },
+    });
+    const taskId = created.json().id as string;
+
+    const started = await app.inject({ method: "POST", url: `/tasks/${taskId}/start` });
+    expect(started.json()).toMatchObject({ status: "in_progress", startedAt: expect.any(String), activeStartedAt: expect.any(String), focusSeconds: 0 });
+
+    const paused = await app.inject({ method: "POST", url: `/tasks/${taskId}/pause` });
+    expect(paused.statusCode).toBe(200);
+    expect(paused.json()).toMatchObject({ status: "paused", activeStartedAt: null, focusSeconds: 0 });
+
+    const resumed = await app.inject({ method: "POST", url: `/tasks/${taskId}/resume` });
+    expect(resumed.json()).toMatchObject({ status: "in_progress", activeStartedAt: expect.any(String) });
+
+    const interrupted = await app.inject({
+      method: "POST",
+      url: `/tasks/${taskId}/interrupt`,
+      payload: { reason: "临时工作插入。" },
+    });
+    expect(interrupted.json()).toMatchObject({ status: "interrupted", interruptionCount: 1, activeStartedAt: null });
+
+    const invalidPause = await app.inject({ method: "POST", url: `/tasks/${taskId}/pause` });
+    expect(invalidPause.statusCode).toBe(409);
+
+    const backup = await app.inject({ method: "GET", url: "/system/backup" });
+    expect(backup.json()).toMatchObject({
+      data: {
+        taskExecutionEvents: [
+          { task_id: taskId, kind: "paused" },
+          { task_id: taskId, kind: "resumed" },
+          { task_id: taskId, kind: "interrupted", reason: "临时工作插入。" },
+        ],
+      },
+    });
+  });
+
   it("protects the one-main-task rule and completed task records", async () => {
     const app = createTestApp();
     const first = await app.inject({ method: "POST", url: "/tasks", payload: taskPayload });

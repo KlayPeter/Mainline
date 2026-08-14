@@ -1,4 +1,4 @@
-import { CaretLeft, CaretRight, Check, Gift, PencilSimple, Play, Plus, Trash } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Check, Gift, Pause, PencilSimple, Play, Plus, Trash, Warning } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { Task, TaskLane } from "@mainline/contracts";
@@ -10,6 +10,8 @@ import {
   deleteTask,
   fetchTasks,
   fulfillTaskPenalty,
+  pauseTask,
+  resumeTask,
   startTask,
   TaskApiError,
 } from "./api";
@@ -17,6 +19,7 @@ import { InterruptionComposer } from "../ai-proposals/InterruptionComposer";
 import { IncompleteComposer } from "./IncompleteComposer";
 import { ResultComposer } from "./ResultComposer";
 import { TaskComposer } from "./TaskComposer";
+import { TaskInterruptionComposer } from "./TaskInterruptionComposer";
 import {
   formatTaskDate,
   formatTaskDateTime,
@@ -41,9 +44,48 @@ interface TaskCardProps {
   onEdit(task: Task): void;
   onFulfillPenalty(task: Task): void;
   onMarkIncomplete(task: Task): void;
+  onPause(task: Task): void;
+  onResume(task: Task): void;
+  onInterrupt(task: Task): void;
   onSubmitResult(task: Task): void;
   onStart(task: Task): void;
   task: Task;
+}
+
+function formatFocusDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours) {
+    return `${hours} 小时 ${minutes} 分`;
+  }
+
+  if (minutes) {
+    return `${minutes} 分 ${seconds} 秒`;
+  }
+
+  return `${seconds} 秒`;
+}
+
+function FocusDuration({ task }: { task: Task }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (task.status !== "in_progress" || !task.activeStartedAt) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(intervalId);
+  }, [task.activeStartedAt, task.status]);
+
+  const activeStartedAt = task.activeStartedAt ? new Date(task.activeStartedAt).getTime() : Number.NaN;
+  const liveSeconds = Number.isNaN(activeStartedAt)
+    ? task.focusSeconds
+    : task.focusSeconds + Math.max(0, Math.floor((now - activeStartedAt) / 1_000));
+
+  return <span className="task-card__minor focus-duration">已专注 {formatFocusDuration(liveSeconds)}</span>;
 }
 
 function shiftDate(date: string, days: number): string {
@@ -65,15 +107,18 @@ function TaskCard({
   onEdit,
   onFulfillPenalty,
   onMarkIncomplete,
+  onPause,
+  onResume,
+  onInterrupt,
   onSubmitResult,
   onStart,
   task,
 }: TaskCardProps) {
   const isActing = actionTaskId === task.id;
   const isCompleted = task.status === "completed";
-  const isActive = task.status === "planned" || task.status === "in_progress";
-  const canCompleteDirectly = isActive && task.completionMode === "direct";
-  const canSubmitResult = isActive && task.completionMode === "result_report";
+  const canSettleExecution = ["planned", "in_progress", "paused", "interrupted"].includes(task.status);
+  const canCompleteDirectly = canSettleExecution && task.completionMode === "direct";
+  const canSubmitResult = canSettleExecution && task.completionMode === "result_report";
   const canResolveResult = task.status === "pending_resolution";
 
   return (
@@ -122,9 +167,25 @@ function TaskCard({
         </div>
       ) : (
         <div className="task-card__actions">
+          {task.status !== "planned" ? <FocusDuration task={task} /> : null}
           {task.status === "planned" ? (
             <button className="small-action" disabled={isActing} onClick={() => onStart(task)} type="button">
-              <Play size={16} weight="fill" /> 认领
+              <Play size={16} weight="fill" /> 开始专注
+            </button>
+          ) : null}
+          {task.status === "in_progress" ? (
+            <>
+              <button className="small-action" disabled={isActing} onClick={() => onPause(task)} type="button">
+                <Pause size={16} weight="fill" /> 暂停
+              </button>
+              <button className="small-action" disabled={isActing} onClick={() => onInterrupt(task)} type="button">
+                <Warning size={16} /> 记录中断
+              </button>
+            </>
+          ) : null}
+          {task.status === "paused" || task.status === "interrupted" ? (
+            <button className="small-action" disabled={isActing} onClick={() => onResume(task)} type="button">
+              <Play size={16} weight="fill" /> 继续专注
             </button>
           ) : null}
           {canCompleteDirectly ? (
@@ -133,9 +194,13 @@ function TaskCard({
             </button>
           ) : null}
           {canSubmitResult ? <button className="small-action small-action--signal" disabled={isActing} onClick={() => onSubmitResult(task)} type="button">提交成果</button> : null}
-          {isActive ? (
+          {canSettleExecution ? (
             <>
               <button className="small-action" disabled={isActing} onClick={() => onMarkIncomplete(task)} type="button">未完成结算</button>
+            </>
+          ) : null}
+          {task.status === "planned" ? (
+            <>
               <button aria-label={`编辑：${task.title}`} className="small-icon-action" disabled={isActing} onClick={() => onEdit(task)} type="button">
                 <PencilSimple size={18} />
               </button>
@@ -161,6 +226,7 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
   const [isInterruptionOpen, setIsInterruptionOpen] = useState(false);
   const [resultTask, setResultTask] = useState<Task | undefined>();
   const [incompleteTask, setIncompleteTask] = useState<Task | undefined>();
+  const [interruptionTask, setInterruptionTask] = useState<Task | undefined>();
 
   const loadTasks = useCallback(async (date: string, signal?: AbortSignal) => {
     setLoadingState("loading");
@@ -283,6 +349,9 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
                   onEdit={setEditingTask}
                   onFulfillPenalty={(task) => void runTaskAction(task, () => fulfillTaskPenalty(task.id), "已记录惩罚兑现。")}
                   onMarkIncomplete={setIncompleteTask}
+                  onPause={(task) => void runTaskAction(task, () => pauseTask(task.id), `已暂停：${task.title}`)}
+                  onResume={(task) => void runTaskAction(task, () => resumeTask(task.id), `继续专注：${task.title}`)}
+                  onInterrupt={setInterruptionTask}
                   onSubmitResult={setResultTask}
                   onStart={(task) => void runTaskAction(task, () => startTask(task.id), `已认领：${task.title}`)}
                   task={mainTask}
@@ -320,6 +389,9 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
                     onEdit={setEditingTask}
                     onFulfillPenalty={(currentTask) => void runTaskAction(currentTask, () => fulfillTaskPenalty(currentTask.id), "已记录惩罚兑现。")}
                     onMarkIncomplete={setIncompleteTask}
+                    onPause={(currentTask) => void runTaskAction(currentTask, () => pauseTask(currentTask.id), `已暂停：${currentTask.title}`)}
+                    onResume={(currentTask) => void runTaskAction(currentTask, () => resumeTask(currentTask.id), `继续专注：${currentTask.title}`)}
+                    onInterrupt={setInterruptionTask}
                     onSubmitResult={setResultTask}
                     onStart={(currentTask) => void runTaskAction(currentTask, () => startTask(currentTask.id), `已认领：${currentTask.title}`)}
                     task={task}
@@ -373,6 +445,17 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
             void refreshWithMessage(task.penaltyStatus === "pending" ? "已结算未完成，请在 24 小时内兑现承诺。" : "已结算为未完成。奖励和经验不会获得。");
           }}
           task={incompleteTask}
+        />
+      ) : null}
+
+      {interruptionTask ? (
+        <TaskInterruptionComposer
+          onClose={() => setInterruptionTask(undefined)}
+          onSaved={(task) => {
+            setInterruptionTask(undefined);
+            void refreshWithMessage(`已记录中断：${task.title}。可以稍后再继续。`);
+          }}
+          task={interruptionTask}
         />
       ) : null}
     </section>

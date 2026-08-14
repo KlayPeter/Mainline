@@ -6,6 +6,7 @@ import type {
   TaskCreateInput,
   TaskDateQuery,
   TaskIncompleteInput,
+  TaskInterruptionInput,
   TaskListResponse,
   TaskResultSubmissionInput,
   TaskUpdateInput,
@@ -145,7 +146,45 @@ export class TaskService {
       throw new TaskDomainError("TASK_CONFLICT", "只有计划中的任务可以认领开始。", 409);
     }
 
-    return this.repository.setStatus(id, "in_progress", null, new Date().toISOString());
+    return this.repository.start(id, new Date().toISOString());
+  }
+
+  pause(id: string): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.status !== "in_progress") {
+      throw new TaskDomainError("TASK_CONFLICT", "只有专注中的任务可以暂停。", 409);
+    }
+
+    const now = new Date();
+    return this.repository.pause(id, this.getFocusedSeconds(existing, now), now.toISOString());
+  }
+
+  resume(id: string): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.status !== "paused" && existing.status !== "interrupted") {
+      throw new TaskDomainError("TASK_CONFLICT", "只有暂停或中断的任务可以继续。", 409);
+    }
+
+    return this.repository.resume(id, new Date().toISOString());
+  }
+
+  interrupt(id: string, input: TaskInterruptionInput): Task {
+    const existing = this.getRequiredTask(id);
+
+    if (existing.status !== "in_progress") {
+      throw new TaskDomainError("TASK_CONFLICT", "只有专注中的任务可以记录中断。", 409);
+    }
+
+    const reason = input.reason.trim();
+
+    if (!reason) {
+      throw new TaskDomainError("TASK_VALIDATION", "请写下这次中断发生了什么。", 422);
+    }
+
+    const now = new Date();
+    return this.repository.interrupt(id, reason, this.getFocusedSeconds(existing, now), now.toISOString());
   }
 
   complete(id: string): Task {
@@ -159,12 +198,12 @@ export class TaskService {
       throw new TaskDomainError("TASK_CONFLICT", "这项任务需要先提交成果，再确认完成。", 409);
     }
 
-    if (existing.status !== "planned" && existing.status !== "in_progress") {
+    if (!this.canSettleExecution(existing.status)) {
       throw new TaskDomainError("TASK_CONFLICT", "当前状态不能直接完成任务。", 409);
     }
 
     const now = new Date().toISOString();
-    return this.repository.complete(id, now, existing.experienceReward);
+    return this.repository.complete(id, now, existing.experienceReward, this.getFocusedSeconds(existing, new Date(now)));
   }
 
   submitResult(id: string, input: TaskResultSubmissionInput): Task {
@@ -174,7 +213,7 @@ export class TaskService {
       throw new TaskDomainError("TASK_CONFLICT", "普通任务不需要提交成果，可直接完成。", 409);
     }
 
-    if (existing.status !== "planned" && existing.status !== "in_progress") {
+    if (!this.canSettleExecution(existing.status)) {
       throw new TaskDomainError("TASK_CONFLICT", "当前状态不能提交成果。", 409);
     }
 
@@ -184,7 +223,8 @@ export class TaskService {
       throw new TaskDomainError("TASK_VALIDATION", "请写下本次任务实际产出的结果。", 422);
     }
 
-    return this.repository.submitResult(id, summary, input.selfAssessment, new Date().toISOString());
+    const now = new Date();
+    return this.repository.submitResult(id, summary, input.selfAssessment, now.toISOString(), this.getFocusedSeconds(existing, now));
   }
 
   confirmResult(id: string): Task {
@@ -202,13 +242,14 @@ export class TaskService {
       id,
       new Date().toISOString(),
       this.getExperienceForAssessment(existing.experienceReward, existing.selfAssessment),
+      this.getFocusedSeconds(existing, new Date()),
     );
   }
 
   markIncomplete(id: string, input: TaskIncompleteInput): Task {
     const existing = this.getRequiredTask(id);
 
-    if (!["planned", "in_progress", "pending_resolution"].includes(existing.status)) {
+    if (!["planned", "in_progress", "paused", "interrupted", "pending_resolution"].includes(existing.status)) {
       throw new TaskDomainError("TASK_CONFLICT", "当前任务不需要再按未完成结算。", 409);
     }
 
@@ -218,7 +259,7 @@ export class TaskService {
       ? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
       : null;
 
-    return this.repository.markIncomplete(id, reason, penaltyDueAt, now.toISOString());
+    return this.repository.markIncomplete(id, reason, penaltyDueAt, now.toISOString(), this.getFocusedSeconds(existing, now));
   }
 
   claimReward(id: string): Task {
@@ -248,7 +289,7 @@ export class TaskService {
   delete(id: string): void {
     const existing = this.getRequiredTask(id);
 
-    if (existing.status !== "planned" && existing.status !== "in_progress") {
+    if (existing.status !== "planned") {
       throw new TaskDomainError("TASK_CONFLICT", "已形成结果的任务是事实记录，不能删除。", 409);
     }
 
@@ -266,8 +307,8 @@ export class TaskService {
   }
 
   private assertEditable(task: Task): void {
-    if (task.status !== "planned" && task.status !== "in_progress") {
-      throw new TaskDomainError("TASK_CONFLICT", "已形成结果的任务不能修改。", 409);
+    if (task.status !== "planned") {
+      throw new TaskDomainError("TASK_CONFLICT", "任务开始后请先暂停或结束，再创建新的安排。", 409);
     }
   }
 
@@ -314,5 +355,23 @@ export class TaskService {
     }
 
     return baseExperience;
+  }
+
+  private canSettleExecution(status: Task["status"]): boolean {
+    return ["planned", "in_progress", "paused", "interrupted"].includes(status);
+  }
+
+  private getFocusedSeconds(task: Task, now: Date): number {
+    if (!task.activeStartedAt) {
+      return task.focusSeconds;
+    }
+
+    const activeStartedAt = new Date(task.activeStartedAt).getTime();
+
+    if (Number.isNaN(activeStartedAt)) {
+      return task.focusSeconds;
+    }
+
+    return task.focusSeconds + Math.max(0, Math.floor((now.getTime() - activeStartedAt) / 1000));
   }
 }

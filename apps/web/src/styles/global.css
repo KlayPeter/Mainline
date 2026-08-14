@@ -591,6 +591,12 @@ h1 {
   line-height: 1.5;
 }
 
+.focus-duration {
+  flex-basis: 100%;
+  color: var(--signal);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
 .composer-backdrop {
   position: fixed;
   z-index: 10;

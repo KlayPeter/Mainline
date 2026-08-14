@@ -45,13 +45,15 @@ flowchart LR
 
 ## 核心规则
 
-1. `main` 任务在同一 `scheduledDate` 只能存在一条计划中或进行中的记录。
+1. `main` 任务在同一 `scheduledDate` 只能存在一条尚未结算的记录，包括计划中、专注中、暂停、中断与待结算状态。
 2. `direct` 任务可直接完成；`result_report` 任务必须先提交成果与自评，再由用户确认完成。
 3. `incomplete` 只能由用户主动结算；有预设承诺时才生成 24 小时内待兑现记录，绝不自动滚期或自动处罚。
 4. 完成、领取奖励和兑现承诺都是不可由普通编辑接口篡改的事实操作。
 5. 所有数据库访问收口在 Repository；路由只负责 TypeBox HTTP 边界与错误映射。
 6. 任务可由用户选择关联一个进行中的目标；关联只是执行归属，不会自动增加目标进度。
 7. 仅待兑现的惩罚可以由用户选择留存 JPEG、PNG 或 WebP 凭据；图片先写入本机文件，再记录 SQLite 元数据，用户仍可跳过凭据直接兑现。
+8. 用户开始专注后，系统保存开始时间、累计专注秒数和当前计时起点；暂停、中断、成果提交、完成或未完成结算都会停止当前计时，刷新页面不会丢失已投入时间。
+9. 中断必须由用户填写原因并显式记录；它不会自动改期、缩小范围或把 AI 建议变成事实。
 
 ## 代码地图
 
@@ -59,11 +61,12 @@ flowchart LR
 
 - `apps/api/src/modules/tasks/routes.ts`：TypeBox 请求/响应边界。
 - `apps/api/src/modules/tasks/service.ts`：任务生命周期和主线唯一性规则。
-- `apps/api/src/modules/tasks/repository.ts`：任务 SQL 读写。
+- `apps/api/src/modules/tasks/repository.ts`：任务 SQL 读写、专注时间累积和中断事件留存。
 - `apps/api/src/modules/tasks/evidence-repository.ts`、`evidence-service.ts`：惩罚凭据元数据、任务状态校验和文件读取。
 - `apps/api/src/platform/evidence/local-evidence-store.ts`：本机图片目录、固定扩展名读写和路径边界。
 - `apps/api/src/platform/database/migrations.ts`：任务表、唯一主线约束与结果/承诺字段迁移。
 - `apps/web/src/features/tasks/TodayScreen.tsx`：Today 页面、结果确认、奖励与惩罚操作。
+- `apps/web/src/features/tasks/TaskInterruptionComposer.tsx`：不依赖 AI 的用户中断记录面板。
 - `apps/web/src/features/tasks/TaskComposer.tsx`：任务录入、完成方式与承诺快照表单。
 - `apps/web/src/features/goals/api.ts`：任务录入时读取可选的进行中目标。
 - `apps/web/src/features/tasks/ResultComposer.tsx`、`IncompleteComposer.tsx`：成果提交与主动未完成结算。
@@ -75,8 +78,8 @@ flowchart LR
 
 ### 主要测试
 
-- `apps/api/src/modules/tasks/routes.test.ts`：CRUD、主线冲突、成果结算、奖励承诺与本机凭据读写。
-- `apps/web/src/features/tasks/TodayScreen.test.tsx`、`outcomes.test.tsx`、`TaskComposer.test.tsx`、`PenaltyEvidenceComposer.test.tsx`：Today、成果、目标关联和凭据交互反馈。
+- `apps/api/src/modules/tasks/routes.test.ts`：CRUD、主线冲突、专注暂停恢复、中断事件、成果结算、奖励承诺与本机凭据读写。
+- `apps/web/src/features/tasks/TodayScreen.test.tsx`、`outcomes.test.tsx`、`TaskComposer.test.tsx`、`TaskInterruptionComposer.test.tsx`、`PenaltyEvidenceComposer.test.tsx`：Today、专注中断、成果、目标关联和凭据交互反馈。
 
 ## 变更记录
 
@@ -87,3 +90,4 @@ flowchart LR
 | 2026-08-14 | 支持用户将任务关联到进行中的目标，并允许在任务形成事实前取消关联 | `pnpm check` |
 | 2026-08-14 | 支持本机惩罚凭据留存、回看与跳过凭据的手动兑现 | `pnpm check` |
 | 2026-08-14 | 在“我的”页提供用户主动下载的本机备份入口 | `pnpm check` |
+| 2026-08-14 | 支持任务专注计时、暂停、恢复与用户记录中断，时间和事件均在本机保存 | `pnpm check` |

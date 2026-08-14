@@ -30,6 +30,10 @@ const baseTask = {
   status: "planned",
   createdAt: "2026-08-14T08:00:00.000Z",
   updatedAt: "2026-08-14T08:00:00.000Z",
+  startedAt: null,
+  activeStartedAt: null,
+  focusSeconds: 0,
+  interruptionCount: 0,
   completedAt: null,
 } as const;
 

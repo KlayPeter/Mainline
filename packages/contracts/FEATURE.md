@@ -41,7 +41,7 @@ flowchart LR
 
 ### 主要实现
 
-- `packages/contracts/src/index.ts`：健康检查、存储状态、任务/结果/进度 DTO、任务目标归属、章节目标、本机凭据、每日提醒与首次问卷 Schema。
+- `packages/contracts/src/index.ts`：健康检查、存储状态、任务/结果/进度与专注状态 DTO、任务目标归属、章节目标、本机凭据、每日提醒与首次问卷 Schema。
 
 ### 主要测试
 
@@ -60,3 +60,4 @@ flowchart LR
 | 2026-08-14 | 扩展本机惩罚凭据上传、列表与元数据契约 | `pnpm check` |
 | 2026-08-14 | 扩展每日提醒读取与更新契约 | `pnpm check` |
 | 2026-08-14 | 扩展首次问卷与用户人生状态资料契约 | `pnpm check` |
+| 2026-08-14 | 扩展任务专注时间、暂停恢复与中断记录契约 | `pnpm check` |
