@@ -5,6 +5,7 @@ import type { ProgressSnapshot } from "@mainline/contracts";
 
 import { claimTaskReward, fetchProgress, fulfillTaskPenalty, TaskApiError } from "./api";
 import { formatTaskDateTime } from "./task-presentation";
+import { ReviewPanel } from "../reviews/ReviewPanel";
 
 type LoadingState = "loading" | "ready" | "error";
 
@@ -68,6 +69,7 @@ export function ProgressScreen() {
             <span>已获得经验</span>
             <strong>{progress.experience}</strong>
           </section>
+          <ReviewPanel />
 
           <section aria-labelledby="rewards-heading" className="task-section">
             <div className="section-heading">

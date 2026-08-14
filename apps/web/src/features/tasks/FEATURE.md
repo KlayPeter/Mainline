@@ -35,6 +35,7 @@ flowchart LR
 - `TaskComposer.tsx`：创建和编辑面板。
 - `ResultComposer.tsx`、`IncompleteComposer.tsx`：成果提交和主动未完成结算面板。
 - `ProgressScreen.tsx`：经验、待领取奖励与待兑现承诺。
+- `ProgressScreen.tsx` 同时挂载 `reviews-and-memory` 的复盘入口；复盘事实仍归属该功能。
 - `api.ts`：任务请求与响应校验。
 - `task-presentation.ts`：任务枚举对应的中文呈现。
 
