@@ -54,3 +54,4 @@ flowchart LR
 | 2026-08-14 | 完成健康检查与存储状态 TypeBox 契约 | `pnpm check` |
 | 2026-08-14 | 完成任务 API TypeBox 契约 | `pnpm check` |
 | 2026-08-14 | 扩展成果结算、奖励承诺与进度快照契约 | `pnpm check` |
+| 2026-08-14 | 扩展多领域章节、目标与进度契约 | `pnpm check` |

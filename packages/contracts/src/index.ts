@@ -59,6 +59,27 @@ export const TaskStatusSchema = Type.Union([
   Type.Literal("closed"),
 ]);
 
+export const LifeDomainSchema = Type.Union([
+  Type.Literal("career"),
+  Type.Literal("learning"),
+  Type.Literal("creation"),
+  Type.Literal("health"),
+  Type.Literal("life"),
+]);
+
+export const ChapterStatusSchema = Type.Union([
+  Type.Literal("active"),
+  Type.Literal("completed"),
+  Type.Literal("archived"),
+]);
+
+export const GoalStatusSchema = Type.Union([
+  Type.Literal("active"),
+  Type.Literal("achieved"),
+  Type.Literal("paused"),
+  Type.Literal("abandoned"),
+]);
+
 export const TaskCompletionModeSchema = Type.Union([
   Type.Literal("direct"),
   Type.Literal("result_report"),
@@ -103,6 +124,11 @@ const TaskResultSummarySchema = Type.String({ minLength: 1, maxLength: 1000 });
 const TaskExperienceSchema = Type.Integer({ minimum: 1, maximum: 100 });
 const GrantedExperienceSchema = Type.Integer({ minimum: 0, maximum: 150 });
 const PenaltyAmountSchema = Type.Integer({ minimum: 1, maximum: 100_000 });
+const ChapterTitleSchema = Type.String({ minLength: 1, maxLength: 120 });
+const ChapterDescriptionSchema = Type.String({ maxLength: 1000 });
+const GoalTitleSchema = Type.String({ minLength: 1, maxLength: 120 });
+const GoalDefinitionSchema = Type.String({ maxLength: 1000 });
+const GoalMetricSchema = Type.String({ maxLength: 120 });
 
 export const TaskSchema = Type.Object(
   {
@@ -182,6 +208,89 @@ export const TaskDateQuerySchema = Type.Object(
 export const TaskListResponseSchema = Type.Object(
   {
     tasks: Type.Array(TaskSchema),
+  },
+  { additionalProperties: false },
+);
+
+export const ChapterSchema = Type.Object(
+  {
+    id: Type.String({ minLength: 1 }),
+    domain: LifeDomainSchema,
+    title: ChapterTitleSchema,
+    description: ChapterDescriptionSchema,
+    startedOn: DateOnlySchema,
+    endsOn: Type.Union([DateOnlySchema, Type.Null()]),
+    status: ChapterStatusSchema,
+    createdAt: Type.String({ minLength: 1 }),
+    updatedAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const GoalSchema = Type.Object(
+  {
+    id: Type.String({ minLength: 1 }),
+    chapterId: Type.String({ minLength: 1 }),
+    title: GoalTitleSchema,
+    definition: GoalDefinitionSchema,
+    metric: GoalMetricSchema,
+    targetValue: Type.Integer({ minimum: 1, maximum: 1_000_000 }),
+    currentValue: Type.Integer({ minimum: 0, maximum: 1_000_000 }),
+    targetDate: Type.Union([DateOnlySchema, Type.Null()]),
+    status: GoalStatusSchema,
+    createdAt: Type.String({ minLength: 1 }),
+    updatedAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const ChapterWithGoalsSchema = Type.Object(
+  {
+    id: Type.String({ minLength: 1 }),
+    domain: LifeDomainSchema,
+    title: ChapterTitleSchema,
+    description: ChapterDescriptionSchema,
+    startedOn: DateOnlySchema,
+    endsOn: Type.Union([DateOnlySchema, Type.Null()]),
+    status: ChapterStatusSchema,
+    createdAt: Type.String({ minLength: 1 }),
+    updatedAt: Type.String({ minLength: 1 }),
+    goals: Type.Array(GoalSchema),
+  },
+  { additionalProperties: false },
+);
+
+export const GoalMapResponseSchema = Type.Object(
+  { chapters: Type.Array(ChapterWithGoalsSchema) },
+  { additionalProperties: false },
+);
+
+export const ChapterCreateInputSchema = Type.Object(
+  {
+    domain: LifeDomainSchema,
+    title: ChapterTitleSchema,
+    description: ChapterDescriptionSchema,
+    startedOn: DateOnlySchema,
+    endsOn: Type.Optional(DateOnlySchema),
+  },
+  { additionalProperties: false },
+);
+
+export const GoalCreateInputSchema = Type.Object(
+  {
+    chapterId: Type.String({ minLength: 1, maxLength: 64 }),
+    title: GoalTitleSchema,
+    definition: GoalDefinitionSchema,
+    metric: GoalMetricSchema,
+    targetValue: Type.Integer({ minimum: 1, maximum: 1_000_000 }),
+    targetDate: Type.Optional(DateOnlySchema),
+  },
+  { additionalProperties: false },
+);
+
+export const GoalProgressInputSchema = Type.Object(
+  {
+    currentValue: Type.Integer({ minimum: 0, maximum: 1_000_000 }),
   },
   { additionalProperties: false },
 );
@@ -340,6 +449,9 @@ export type TaskLane = Static<typeof TaskLaneSchema>;
 export type TaskForm = Static<typeof TaskFormSchema>;
 export type TaskTimeBlock = Static<typeof TaskTimeBlockSchema>;
 export type TaskStatus = Static<typeof TaskStatusSchema>;
+export type LifeDomain = Static<typeof LifeDomainSchema>;
+export type ChapterStatus = Static<typeof ChapterStatusSchema>;
+export type GoalStatus = Static<typeof GoalStatusSchema>;
 export type TaskCompletionMode = Static<typeof TaskCompletionModeSchema>;
 export type TaskRewardStatus = Static<typeof TaskRewardStatusSchema>;
 export type TaskPenaltyKind = Static<typeof TaskPenaltyKindSchema>;
@@ -349,6 +461,13 @@ export type TaskCreateInput = Static<typeof TaskCreateInputSchema>;
 export type TaskUpdateInput = Static<typeof TaskUpdateInputSchema>;
 export type TaskDateQuery = Static<typeof TaskDateQuerySchema>;
 export type TaskListResponse = Static<typeof TaskListResponseSchema>;
+export type Chapter = Static<typeof ChapterSchema>;
+export type Goal = Static<typeof GoalSchema>;
+export type ChapterWithGoals = Static<typeof ChapterWithGoalsSchema>;
+export type GoalMapResponse = Static<typeof GoalMapResponseSchema>;
+export type ChapterCreateInput = Static<typeof ChapterCreateInputSchema>;
+export type GoalCreateInput = Static<typeof GoalCreateInputSchema>;
+export type GoalProgressInput = Static<typeof GoalProgressInputSchema>;
 export type TaskResultSubmissionInput = Static<typeof TaskResultSubmissionInputSchema>;
 export type TaskIncompleteInput = Static<typeof TaskIncompleteInputSchema>;
 export type ProgressReward = Static<typeof ProgressRewardSchema>;
@@ -399,6 +518,10 @@ export function isTaskListResponse(value: unknown): value is TaskListResponse {
 
 export function isProgressSnapshot(value: unknown): value is ProgressSnapshot {
   return Value.Check(ProgressSnapshotSchema, value);
+}
+
+export function isGoalMapResponse(value: unknown): value is GoalMapResponse {
+  return Value.Check(GoalMapResponseSchema, value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

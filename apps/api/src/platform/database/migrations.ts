@@ -119,6 +119,41 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_005_chapters_and_goals",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE chapters (
+          id TEXT PRIMARY KEY,
+          domain TEXT NOT NULL CHECK (domain IN ('career', 'learning', 'creation', 'health', 'life')),
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          started_on TEXT NOT NULL,
+          ends_on TEXT,
+          status TEXT NOT NULL CHECK (status IN ('active', 'completed', 'archived')),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE TABLE goals (
+          id TEXT PRIMARY KEY,
+          chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE RESTRICT,
+          title TEXT NOT NULL,
+          definition TEXT NOT NULL,
+          metric TEXT NOT NULL,
+          target_value INTEGER NOT NULL CHECK (target_value BETWEEN 1 AND 1000000),
+          current_value INTEGER NOT NULL DEFAULT 0 CHECK (current_value BETWEEN 0 AND 1000000),
+          target_date TEXT,
+          status TEXT NOT NULL CHECK (status IN ('active', 'achieved', 'paused', 'abandoned')),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE INDEX chapters_by_status_and_domain ON chapters (status, domain, started_on DESC);
+        CREATE INDEX goals_by_chapter_and_status ON goals (chapter_id, status, created_at);
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

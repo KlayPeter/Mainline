@@ -20,6 +20,7 @@ flowchart LR
 | `local-runtime` | 本地 API 健康检查、配置和运行边界 | active | `apps/api/src/modules/system/FEATURE.md` |
 | `local-persistence` | SQLite 本地存储、迁移与存储状态 | active | `apps/api/src/platform/database/FEATURE.md` |
 | `task-management` | Today、任务录入、任务生命周期与数据库规则 | active | `apps/api/src/modules/tasks/FEATURE.md` |
+| `chapters-and-goals` | 多领域章节、目标与用户手动进度 | active | `apps/api/src/modules/goals/FEATURE.md` |
 | `ai-proposals` | DeepSeek 规划提案、确认与现实中断建议 | active | `apps/api/src/modules/ai-proposals/FEATURE.md` |
 | `shared-contracts` | Web 与 API 共用的领域契约 | active | `packages/contracts/FEATURE.md` |
 
@@ -31,6 +32,7 @@ flowchart LR
 | `apps/api/src/app.ts`、`apps/api/src/index.ts`、`apps/api/src/modules/system/**` | `local-runtime`、`local-persistence` |
 | `apps/api/src/platform/database/**` | `local-persistence` |
 | `apps/api/src/modules/tasks/**` | `task-management` |
+| `apps/api/src/modules/goals/**` | `chapters-and-goals` |
 | `apps/web/src/features/tasks/**` | `task-management` |
 | `apps/api/src/modules/ai-proposals/**`、`apps/api/src/platform/ai/**` | `ai-proposals` |
 | `apps/web/src/features/ai-proposals/**` | `ai-proposals` |
