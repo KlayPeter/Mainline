@@ -1,0 +1,8 @@
+import { isGoalMapResponse, type Chapter, type ChapterCreateInput, type Goal, type GoalCreateInput, type GoalMapResponse } from "@mainline/contracts";
+export class GoalApiError extends Error {}
+async function msg(response: Response) { const body = await response.json().catch(() => undefined) as { message?: unknown } | undefined; return typeof body?.message === "string" ? body.message : "这次保存没有完成，请稍后再试。"; }
+async function read<T>(responsePromise: Promise<Response>): Promise<T> { const response = await responsePromise; if (!response.ok) throw new GoalApiError(await msg(response)); return response.json() as Promise<T>; }
+export async function fetchGoalMap(signal?: AbortSignal): Promise<GoalMapResponse> { const response = await fetch("/api/chapters", { signal }); if (!response.ok) throw new GoalApiError(await msg(response)); const data: unknown = await response.json(); if (!isGoalMapResponse(data)) throw new GoalApiError("本地服务返回了无法识别的目标数据。"); return data; }
+export function createChapter(input: ChapterCreateInput): Promise<Chapter> { return read(fetch("/api/chapters", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) })); }
+export function createGoal(input: GoalCreateInput): Promise<Goal> { return read(fetch("/api/goals", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) })); }
+export function updateGoalProgress(id: string, currentValue: number): Promise<Goal> { return read(fetch(`/api/goals/${id}/progress`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ currentValue }) })); }

@@ -9,6 +9,7 @@ import {
 import { useEffect, useState, type ComponentType } from "react";
 
 import { fetchLocalHealth } from "./api";
+import { GoalsScreen } from "../features/goals/GoalsScreen";
 import { ProgressScreen } from "../features/tasks/ProgressScreen";
 import { TodayScreen } from "../features/tasks/TodayScreen";
 
@@ -29,17 +30,6 @@ const navigationItems: NavigationItem[] = [
   { key: "record", label: "记录", icon: Plus },
   { key: "me", label: "我的", icon: UserCircle },
 ];
-
-const pageCopy: Record<Exclude<NavigationKey, "today">, { title: string; body: string }> = {
-  goals: {
-    title: "目标还在整理中",
-    body: "下一阶段会在这里呈现你的章节、主线与支线。",
-  },
-  me: {
-    title: "你的存档",
-    body: "经验、奖励、复盘和本地备份会在这里慢慢形成。",
-  },
-};
 
 function connectionLabel(state: ConnectionState): string {
   if (state === "ready") {
@@ -76,8 +66,6 @@ export function App() {
   }, []);
 
   const isToday = activePage === "today";
-  const secondaryPage = isToday || activePage === "me" ? null : pageCopy[activePage];
-
   return (
     <div className="app-shell" data-theme={theme}>
       <header className="topbar">
@@ -108,11 +96,7 @@ export function App() {
         ) : activePage === "me" ? (
           <ProgressScreen />
         ) : (
-          <section aria-labelledby="secondary-page-heading" className="placeholder-view">
-            <p className="section-kicker">{navigationItems.find((item) => item.key === activePage)?.label}</p>
-            <h1 id="secondary-page-heading">{secondaryPage?.title}</h1>
-            <p className="lede">{secondaryPage?.body}</p>
-          </section>
+          <GoalsScreen />
         )}
       </main>
 

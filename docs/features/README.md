@@ -34,6 +34,7 @@ flowchart LR
 | `apps/api/src/modules/tasks/**` | `task-management` |
 | `apps/api/src/modules/goals/**` | `chapters-and-goals` |
 | `apps/web/src/features/tasks/**` | `task-management` |
+| `apps/web/src/features/goals/**` | `chapters-and-goals` |
 | `apps/api/src/modules/ai-proposals/**`、`apps/api/src/platform/ai/**` | `ai-proposals` |
 | `apps/web/src/features/ai-proposals/**` | `ai-proposals` |
 | `packages/contracts/**` | `shared-contracts` |
