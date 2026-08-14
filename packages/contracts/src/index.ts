@@ -14,6 +14,17 @@ export const HealthResponseSchema = Type.Object(
 
 export type HealthResponse = Static<typeof HealthResponseSchema>;
 
+export const LocalStorageStatusSchema = Type.Object(
+  {
+    status: Type.Literal("ready"),
+    driver: Type.Literal("sqlite"),
+    migrationCount: Type.Integer({ minimum: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export type LocalStorageStatus = Static<typeof LocalStorageStatusSchema>;
+
 export function isHealthResponse(value: unknown): value is HealthResponse {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
@@ -21,4 +32,19 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
 
   const candidate = value as Record<string, unknown>;
   return candidate.status === "ok" && candidate.service === "mainline-api";
+}
+
+export function isLocalStorageStatus(value: unknown): value is LocalStorageStatus {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    candidate.status === "ready" &&
+    candidate.driver === "sqlite" &&
+    typeof candidate.migrationCount === "number" &&
+    Number.isInteger(candidate.migrationCount) &&
+    candidate.migrationCount >= 1
+  );
 }

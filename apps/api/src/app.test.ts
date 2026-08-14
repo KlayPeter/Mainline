@@ -10,7 +10,7 @@ describe("local API", () => {
   });
 
   it("returns the validated health contract", async () => {
-    const app = createApp();
+    const app = createApp({ databasePath: ":memory:" });
     apps.push(app);
 
     const response = await app.inject({ method: "GET", url: "/health" });
@@ -19,6 +19,20 @@ describe("local API", () => {
     expect(response.json()).toEqual({
       status: "ok",
       service: "mainline-api",
+    });
+  });
+
+  it("reports that the local SQLite store is ready without exposing its contents", async () => {
+    const app = createApp({ databasePath: ":memory:" });
+    apps.push(app);
+
+    const response = await app.inject({ method: "GET", url: "/system/storage" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      status: "ready",
+      driver: "sqlite",
+      migrationCount: 1,
     });
   });
 });

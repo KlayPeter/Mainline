@@ -1,9 +1,17 @@
-import { HealthResponseSchema } from "@mainline/contracts";
+import { HealthResponseSchema, LocalStorageStatusSchema } from "@mainline/contracts";
 import type { FastifyInstance } from "fastify";
 
-import { getHealth } from "./service.js";
+import type { LocalDatabase } from "../../platform/database/local-database.js";
+import { getHealth, getStorageStatus } from "./service.js";
 
-export async function registerSystemRoutes(app: FastifyInstance): Promise<void> {
+interface SystemRoutesOptions {
+  database: LocalDatabase;
+}
+
+export async function registerSystemRoutes(
+  app: FastifyInstance,
+  options: SystemRoutesOptions,
+): Promise<void> {
   app.get(
     "/health",
     {
@@ -14,5 +22,17 @@ export async function registerSystemRoutes(app: FastifyInstance): Promise<void> 
       },
     },
     async () => getHealth(),
+  );
+
+  app.get(
+    "/system/storage",
+    {
+      schema: {
+        response: {
+          200: LocalStorageStatusSchema,
+        },
+      },
+    },
+    async () => getStorageStatus(options.database),
   );
 }

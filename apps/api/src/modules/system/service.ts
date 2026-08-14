@@ -1,4 +1,6 @@
-import type { HealthResponse } from "@mainline/contracts";
+import type { HealthResponse, LocalStorageStatus } from "@mainline/contracts";
+
+import type { LocalDatabase } from "../../platform/database/local-database.js";
 
 /**
  * System-level factual state. Keeping even this small response in a service
@@ -9,4 +11,8 @@ export function getHealth(): HealthResponse {
     status: "ok",
     service: "mainline-api",
   };
+}
+
+export function getStorageStatus(database: LocalDatabase): LocalStorageStatus {
+  return database.getStatus();
 }

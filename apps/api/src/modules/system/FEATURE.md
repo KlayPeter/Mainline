@@ -25,6 +25,7 @@ flowchart LR
 - 启动本地 Fastify 服务。
 - 提供 TypeBox 定义的健康检查响应。
 - 读取安全的本地服务端口配置。
+- 提供不含用户内容的本地存储就绪状态。
 
 ### 非目标
 
@@ -46,13 +47,15 @@ flowchart LR
 - `apps/api/src/index.ts`：本地服务启动。
 - `apps/api/src/modules/system/routes.ts`：健康检查 HTTP 边界。
 - `apps/api/src/modules/system/service.ts`：健康检查事实数据。
+- `apps/api/src/modules/system/routes.ts`：健康检查与存储状态 HTTP 边界。
 
 ### 主要测试
 
 - `apps/api/src/app.test.ts`：健康检查响应。
+- `apps/api/src/platform/database/local-database.test.ts`：本地存储迁移。
 
 ## 变更记录
 
 | 日期 | 变更 | 验证 |
 | --- | --- | --- |
-| 2026-08-14 | 完成本地健康检查 | `pnpm check` |
+| 2026-08-14 | 完成本地健康检查与存储状态 | `pnpm check` |

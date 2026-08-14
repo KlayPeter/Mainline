@@ -1,11 +1,19 @@
 import Fastify, { type FastifyServerOptions } from "fastify";
 
 import { registerSystemRoutes } from "./modules/system/routes.js";
+import { LocalDatabase } from "./platform/database/local-database.js";
 
-export function createApp(options: FastifyServerOptions = {}) {
-  const app = Fastify({ logger: false, ...options });
+export interface MainlineAppOptions {
+  databasePath?: string;
+  fastify?: FastifyServerOptions;
+}
 
-  app.register(registerSystemRoutes);
+export function createApp(options: MainlineAppOptions = {}) {
+  const database = new LocalDatabase(options.databasePath);
+  const app = Fastify({ logger: false, ...options.fastify });
+
+  app.addHook("onClose", () => database.close());
+  app.register(registerSystemRoutes, { database });
 
   return app;
 }
