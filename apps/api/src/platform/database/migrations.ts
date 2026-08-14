@@ -58,6 +58,24 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_003_ai_proposals",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE ai_proposals (
+          id TEXT PRIMARY KEY,
+          kind TEXT NOT NULL CHECK (kind IN ('task_plan', 'interruption')),
+          status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'dismissed')),
+          payload_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          resolved_at TEXT
+        ) STRICT;
+
+        CREATE INDEX ai_proposals_by_status_and_created_at
+        ON ai_proposals (status, created_at DESC);
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

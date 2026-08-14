@@ -20,6 +20,7 @@ flowchart LR
 | `local-runtime` | 本地 API 健康检查、配置和运行边界 | active | `apps/api/src/modules/system/FEATURE.md` |
 | `local-persistence` | SQLite 本地存储、迁移与存储状态 | active | `apps/api/src/platform/database/FEATURE.md` |
 | `task-management` | Today、任务录入、任务生命周期与数据库规则 | active | `apps/api/src/modules/tasks/FEATURE.md` |
+| `ai-proposals` | DeepSeek 规划提案、确认与现实中断建议 | active | `apps/api/src/modules/ai-proposals/FEATURE.md` |
 | `shared-contracts` | Web 与 API 共用的领域契约 | active | `packages/contracts/FEATURE.md` |
 
 ## 代码路径映射
@@ -31,6 +32,8 @@ flowchart LR
 | `apps/api/src/platform/database/**` | `local-persistence` |
 | `apps/api/src/modules/tasks/**` | `task-management` |
 | `apps/web/src/features/tasks/**` | `task-management` |
+| `apps/api/src/modules/ai-proposals/**`、`apps/api/src/platform/ai/**` | `ai-proposals` |
+| `apps/web/src/features/ai-proposals/**` | `ai-proposals` |
 | `packages/contracts/**` | `shared-contracts` |
 
 后续新增 Today、任务、AI 提案、结果、契约和复盘功能时，需要先建立各自的主 Owner `FEATURE.md`，再补充此表。

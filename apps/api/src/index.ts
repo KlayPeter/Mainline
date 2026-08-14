@@ -1,6 +1,14 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { createApp } from "./app.js";
 
 const DEFAULT_PORT = 4174;
+const environmentPath = resolve(import.meta.dirname, "../../../.env");
+
+if (existsSync(environmentPath)) {
+  process.loadEnvFile(environmentPath);
+}
 
 export function getServerPort(value = process.env.MAINLINE_PORT): number {
   const port = Number(value);

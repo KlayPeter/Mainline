@@ -5,6 +5,7 @@ import type { Task, TaskCreateInput, TaskForm, TaskLane, TaskTimeBlock } from "@
 
 import { createTask, TaskApiError, updateTask } from "./api";
 import { getFormLabel, getLaneLabel, getTimeBlockLabel } from "./task-presentation";
+import { TaskPlanSuggestion } from "../ai-proposals/TaskPlanSuggestion";
 
 interface TaskComposerProps {
   defaultLane?: TaskLane;
@@ -120,6 +121,17 @@ export function TaskComposer({ defaultLane, task, scheduledDate, onClose, onSave
               value={form.details}
             />
           </label>
+
+          {!task ? (
+            <TaskPlanSuggestion
+              details={form.details}
+              onApply={(suggestion) => {
+                setForm((current) => ({ ...current, ...suggestion }));
+              }}
+              scheduledDate={form.scheduledDate}
+              title={form.title}
+            />
+          ) : null}
 
           <div className="form-grid">
             <label className="form-field">

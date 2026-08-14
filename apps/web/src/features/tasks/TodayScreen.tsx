@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Task, TaskLane } from "@mainline/contracts";
 
 import { completeTask, deleteTask, fetchTasks, startTask, TaskApiError } from "./api";
+import { InterruptionComposer } from "../ai-proposals/InterruptionComposer";
 import { TaskComposer } from "./TaskComposer";
 import {
   formatTaskDate,
@@ -88,6 +89,7 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
   const [actionTaskId, setActionTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [draftLane, setDraftLane] = useState<TaskLane | undefined>();
+  const [isInterruptionOpen, setIsInterruptionOpen] = useState(false);
 
   const loadTasks = useCallback(async (date: string, signal?: AbortSignal) => {
     setLoadingState("loading");
@@ -200,14 +202,19 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
               <span>只能有一条</span>
             </div>
             {mainTask ? (
-              <TaskCard
-                actionTaskId={actionTaskId}
-                onComplete={(task) => void runTaskAction(task, () => completeTask(task.id), `已完成：${task.title}`)}
-                onDelete={handleDelete}
-                onEdit={setEditingTask}
-                onStart={(task) => void runTaskAction(task, () => startTask(task.id), `已认领：${task.title}`)}
-                task={mainTask}
-              />
+              <>
+                <TaskCard
+                  actionTaskId={actionTaskId}
+                  onComplete={(task) => void runTaskAction(task, () => completeTask(task.id), `已完成：${task.title}`)}
+                  onDelete={handleDelete}
+                  onEdit={setEditingTask}
+                  onStart={(task) => void runTaskAction(task, () => startTask(task.id), `已认领：${task.title}`)}
+                  task={mainTask}
+                />
+                <button className="reality-link" onClick={() => setIsInterruptionOpen(true)} type="button">
+                  现实有变？调整一下
+                </button>
+              </>
             ) : (
               <div className="empty-main-task">
                 <h3>还没有主线</h3>
@@ -255,6 +262,14 @@ export function TodayScreen({ isComposerOpen, onComposerOpenChange }: TodayScree
           }}
           scheduledDate={selectedDate}
           task={editingTask}
+        />
+      ) : null}
+
+      {isInterruptionOpen ? (
+        <InterruptionComposer
+          onClose={() => setIsInterruptionOpen(false)}
+          onResolved={(nextMessage) => setMessage(nextMessage)}
+          task={mainTask}
         />
       ) : null}
     </section>
