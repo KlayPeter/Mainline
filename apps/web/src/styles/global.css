@@ -26,7 +26,8 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
-.app-shell {
+.app-shell,
+.onboarding-shell {
   --canvas: #141617;
   --surface: #1c1f20;
   --surface-raised: #242829;
@@ -43,7 +44,8 @@ button:focus-visible {
   transition: background-color 180ms ease, color 180ms ease;
 }
 
-.app-shell[data-theme="light"] {
+.app-shell[data-theme="light"],
+.onboarding-shell[data-theme="light"] {
   --canvas: #f5f4ee;
   --surface: #ecebe4;
   --surface-raised: #ffffff;
@@ -108,6 +110,84 @@ button:focus-visible {
   width: min(100%, 720px);
   margin: 0 auto;
   padding: clamp(68px, 13vh, 130px) 24px 124px;
+}
+
+.onboarding-shell {
+  display: grid;
+  min-height: 100dvh;
+  padding: max(28px, env(safe-area-inset-top)) 24px max(34px, env(safe-area-inset-bottom));
+  place-items: center;
+}
+
+.onboarding-inner {
+  width: min(100%, 560px);
+  padding: clamp(22px, 6vh, 52px) 0;
+}
+
+.onboarding-label {
+  margin: 52px 0 0;
+  color: var(--signal);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.onboarding-privacy {
+  max-width: 31rem;
+  margin: 16px 0 0;
+  color: var(--faint);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.onboarding-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 42px;
+}
+
+.onboarding-form .form-field small {
+  color: var(--faint);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.onboarding-actions .text-button {
+  margin: 0;
+}
+
+.profile-editor {
+  max-width: 590px;
+}
+
+.profile-editor .onboarding-label {
+  margin-top: 0;
+}
+
+.profile-editor h1 {
+  max-width: 12em;
+  font-size: clamp(2rem, 7vw, 3rem);
+}
+
+.profile-editor .onboarding-privacy {
+  margin-top: 14px;
+}
+
+.profile-editor .onboarding-form {
+  margin-top: 30px;
+}
+
+.onboarding-loading {
+  padding-top: clamp(68px, 13vh, 130px);
 }
 
 .today-view,
@@ -637,6 +717,30 @@ h1 {
 
 .progress-view {
   max-width: 590px;
+}
+
+.profile-panel {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-panel strong {
+  display: block;
+  font-size: 1.0625rem;
+  letter-spacing: -0.025em;
+}
+
+.profile-panel p {
+  max-width: 32rem;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.profile-panel .text-button {
+  margin-top: 12px;
 }
 
 .goals-view { max-width: 590px; }

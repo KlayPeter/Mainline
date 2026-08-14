@@ -10,6 +10,11 @@ import { useEffect, useState, type ComponentType } from "react";
 
 import { fetchLocalHealth } from "./api";
 import { GoalsScreen } from "../features/goals/GoalsScreen";
+import {
+  OnboardingProvider,
+  useOnboardingProfile,
+} from "../features/onboarding/OnboardingContext";
+import { OnboardingScreen } from "../features/onboarding/OnboardingScreen";
 import { ReminderProvider } from "../features/reminders/ReminderContext";
 import { ProgressScreen } from "../features/tasks/ProgressScreen";
 import { TodayScreen } from "../features/tasks/TodayScreen";
@@ -44,11 +49,13 @@ function connectionLabel(state: ConnectionState): string {
   return "正在连接本地存档";
 }
 
-export function App() {
+function MainlineApp() {
+  const { loadState: onboardingLoadState, profile } = useOnboardingProfile();
   const [activePage, setActivePage] = useState<NavigationKey>("today");
   const [connectionState, setConnectionState] = useState<ConnectionState>("checking");
   const [theme, setTheme] = useState<Theme>("dark");
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,14 +73,28 @@ export function App() {
     return () => controller.abort();
   }, []);
 
+  if (onboardingLoadState === "loading") {
+    return (
+      <div className="app-shell" data-theme="dark">
+        <main className="content onboarding-loading">
+          <p className="wordmark">MAINLINE</p>
+          <p className="task-state">正在读取你的本机资料…</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (profile && !profile.completed) {
+    return <OnboardingScreen mode="initial" />;
+  }
+
   const isToday = activePage === "today";
   return (
-    <ReminderProvider>
-      <div className="app-shell" data-theme={theme}>
+    <div className="app-shell" data-theme={theme}>
       <header className="topbar">
         <div>
           <p className="wordmark">MAINLINE</p>
-          <p className="chapter-label">第一阶段 · 过渡</p>
+          <p className="chapter-label">{profile?.lifeStateTitle || "当前阶段"}</p>
         </div>
         <button
           aria-label={theme === "dark" ? "切换到浅色界面" : "切换到深色界面"}
@@ -87,7 +108,9 @@ export function App() {
       </header>
 
       <main className="content" id="main-content">
-        {isToday ? (
+        {isProfileEditorOpen ? (
+          <OnboardingScreen mode="edit" onDone={() => setIsProfileEditorOpen(false)} />
+        ) : isToday ? (
           <>
             <TodayScreen isComposerOpen={isComposerOpen} onComposerOpenChange={setIsComposerOpen} />
             <div aria-live="polite" className={`connection connection--${connectionState}`}>
@@ -96,7 +119,7 @@ export function App() {
             </div>
           </>
         ) : activePage === "me" ? (
-          <ProgressScreen />
+          <ProgressScreen onProfileEdit={() => setIsProfileEditorOpen(true)} />
         ) : (
           <GoalsScreen />
         )}
@@ -130,7 +153,16 @@ export function App() {
           );
         })}
       </nav>
-      </div>
-    </ReminderProvider>
+    </div>
+  );
+}
+
+export function App() {
+  return (
+    <OnboardingProvider>
+      <ReminderProvider>
+        <MainlineApp />
+      </ReminderProvider>
+    </OnboardingProvider>
   );
 }

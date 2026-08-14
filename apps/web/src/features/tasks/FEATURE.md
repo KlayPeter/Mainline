@@ -37,6 +37,7 @@ flowchart LR
 - `ProgressScreen.tsx`：经验、待领取奖励与待兑现承诺。
 - `ProgressScreen.tsx` 同时挂载 `reviews-and-memory` 的复盘入口；复盘事实仍归属该功能。
 - `ProgressScreen.tsx` 同时挂载 `daily-reminders` 的提醒入口；提醒设置事实仍归属该功能。
+- `ProgressScreen.tsx` 同时挂载 `initial-onboarding` 的个人资料摘要；资料事实仍归属该功能。
 - `api.ts`：任务请求与响应校验。
 - `task-presentation.ts`：任务枚举对应的中文呈现。
 
@@ -47,3 +48,4 @@ flowchart LR
 | 2026-08-14 | 完成 Today、任务录入与普通完成体验 | `pnpm check` |
 | 2026-08-14 | 接入成果确认、奖励领取、承诺结算与个人进度 | `pnpm check` |
 | 2026-08-14 | 在“我的”页挂载本机每日提醒入口 | `pnpm check` |
+| 2026-08-14 | 在“我的”页挂载当前人生状态摘要与编辑入口 | `pnpm check` |

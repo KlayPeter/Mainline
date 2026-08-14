@@ -220,6 +220,38 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_010_onboarding_profile",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE onboarding_profile (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          life_state_title TEXT NOT NULL,
+          life_state_description TEXT NOT NULL,
+          life_state_started_on TEXT,
+          life_state_ends_on TEXT,
+          current_context TEXT NOT NULL,
+          time_constraints TEXT NOT NULL,
+          interruption_patterns TEXT NOT NULL,
+          reward_preferences TEXT NOT NULL,
+          penalty_preferences TEXT NOT NULL,
+          capability_focus TEXT NOT NULL,
+          onboarding_completed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+
+        INSERT INTO onboarding_profile (
+          id, life_state_title, life_state_description, life_state_started_on, life_state_ends_on,
+          current_context, time_constraints, interruption_patterns, reward_preferences,
+          penalty_preferences, capability_focus, onboarding_completed_at, created_at, updated_at
+        ) VALUES (
+          1, '', '', NULL, NULL, '', '', '', '', '', '', NULL,
+          strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        );
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

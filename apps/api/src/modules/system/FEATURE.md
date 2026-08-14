@@ -28,6 +28,7 @@ flowchart LR
 - 提供不含用户内容的本地存储就绪状态。
 - 提供用户主动下载的本机备份文件。
 - 装配本机每日提醒的 HTTP 模块，不承担提醒规则本身。
+- 装配首次问卷与本机人生资料的 HTTP 模块，不替用户创建章节或目标。
 
 ### 非目标
 
@@ -51,6 +52,7 @@ flowchart LR
 - `apps/api/src/modules/system/routes.ts`：健康检查、存储状态与本机备份下载 HTTP 边界。
 - `apps/api/src/modules/system/service.ts`：健康检查事实数据。
 - `apps/api/src/modules/reminders/routes.ts`：由应用装配的每日提醒 HTTP 边界。
+- `apps/api/src/modules/onboarding/routes.ts`：由应用装配的首次问卷 HTTP 边界。
 
 ### 主要测试
 
@@ -66,3 +68,4 @@ flowchart LR
 | 2026-08-14 | 注入本机凭据目录，仅供任务惩罚图片读写 | `pnpm check` |
 | 2026-08-14 | 增加用户主动下载的本机备份端点 | `pnpm check` |
 | 2026-08-14 | 装配本机每日提醒 API 模块 | `pnpm check` |
+| 2026-08-14 | 装配首次问卷与人生状态 API 模块 | `pnpm check` |

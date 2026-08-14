@@ -24,6 +24,7 @@ flowchart LR
 | `reviews-and-memory` | 每日复盘与用户选择的本地长期记忆 | active | `apps/api/src/modules/reviews/FEATURE.md` |
 | `ai-proposals` | DeepSeek 规划提案、确认与现实中断建议 | active | `apps/api/src/modules/ai-proposals/FEATURE.md` |
 | `daily-reminders` | 本机每日提醒设置与打开网页期间的浏览器通知 | active | `apps/api/src/modules/reminders/FEATURE.md` |
+| `initial-onboarding` | 首次问卷、可编辑人生状态与本机背景资料 | active | `apps/api/src/modules/onboarding/FEATURE.md` |
 | `shared-contracts` | Web 与 API 共用的领域契约 | active | `packages/contracts/FEATURE.md` |
 
 ## 代码路径映射
@@ -44,6 +45,7 @@ flowchart LR
 | `apps/api/src/modules/ai-proposals/**`、`apps/api/src/platform/ai/**` | `ai-proposals` |
 | `apps/web/src/features/ai-proposals/**` | `ai-proposals` |
 | `apps/api/src/modules/reminders/**`、`apps/web/src/features/reminders/**` | `daily-reminders` |
+| `apps/api/src/modules/onboarding/**`、`apps/web/src/features/onboarding/**` | `initial-onboarding` |
 | `packages/contracts/**` | `shared-contracts` |
 
 后续新增 Today、任务、AI 提案、结果、契约和复盘功能时，需要先建立各自的主 Owner `FEATURE.md`，再补充此表。

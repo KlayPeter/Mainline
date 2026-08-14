@@ -8,10 +8,11 @@ import { PenaltyEvidenceComposer } from "./PenaltyEvidenceComposer";
 import { formatTaskDateTime } from "./task-presentation";
 import { ReminderPanel } from "../reminders/ReminderPanel";
 import { ReviewPanel } from "../reviews/ReviewPanel";
+import { ProfilePanel } from "../onboarding/ProfilePanel";
 
 type LoadingState = "loading" | "ready" | "error";
 
-export function ProgressScreen() {
+export function ProgressScreen({ onProfileEdit }: { onProfileEdit?: () => void }) {
   const [progress, setProgress] = useState<ProgressSnapshot | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>("loading");
   const [message, setMessage] = useState<string | null>(null);
@@ -77,6 +78,7 @@ export function ProgressScreen() {
             <span>已获得经验</span>
             <strong>{progress.experience}</strong>
           </section>
+          {onProfileEdit ? <ProfilePanel onEdit={onProfileEdit} /> : null}
           <ReviewPanel />
           <ReminderPanel />
 
@@ -130,7 +132,7 @@ export function ProgressScreen() {
 
           <section aria-labelledby="backup-heading" className="task-section local-backup">
             <div className="section-heading"><h2 id="backup-heading">本地备份</h2><span>只在本机生成</span></div>
-            <p className="task-state">下载一份完整 JSON 存档，包含任务、章节、复盘、AI 提案和凭据图片。恢复导入会在后续版本开放。</p>
+            <p className="task-state">下载一份完整 JSON 存档，包含人生资料、任务、章节、复盘、AI 提案和凭据图片。恢复导入会在后续版本开放。</p>
             <a className="text-button" download href="/api/system/backup">下载本地备份</a>
           </section>
         </>

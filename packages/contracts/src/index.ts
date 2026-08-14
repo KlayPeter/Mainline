@@ -134,6 +134,9 @@ const ReviewTextSchema = Type.String({ maxLength: 1500 });
 const EvidenceFilenameSchema = Type.String({ minLength: 1, maxLength: 180 });
 const EvidenceDataSchema = Type.String({ minLength: 4, maxLength: 7_000_000 });
 const ReminderTimeSchema = Type.String({ pattern: "^[0-2][0-9]:[0-5][0-9]$" });
+const LifeStateTitleSchema = Type.String({ maxLength: 80 });
+const LifeStateDescriptionSchema = Type.String({ maxLength: 600 });
+const OnboardingNotesSchema = Type.String({ maxLength: 1_000 });
 
 export const TaskEvidenceKindSchema = Type.Literal("penalty");
 export const TaskEvidenceMimeTypeSchema = Type.Union([
@@ -401,6 +404,41 @@ export const DailyReminderUpdateInputSchema = Type.Object(
   { additionalProperties: false },
 );
 
+export const OnboardingProfileSchema = Type.Object(
+  {
+    completed: Type.Boolean(),
+    lifeStateTitle: LifeStateTitleSchema,
+    lifeStateDescription: LifeStateDescriptionSchema,
+    lifeStateStartedOn: Type.Union([DateOnlySchema, Type.Null()]),
+    lifeStateEndsOn: Type.Union([DateOnlySchema, Type.Null()]),
+    currentContext: OnboardingNotesSchema,
+    timeConstraints: OnboardingNotesSchema,
+    interruptionPatterns: OnboardingNotesSchema,
+    rewardPreferences: OnboardingNotesSchema,
+    penaltyPreferences: OnboardingNotesSchema,
+    capabilityFocus: OnboardingNotesSchema,
+    completedAt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    updatedAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const OnboardingProfileUpdateInputSchema = Type.Object(
+  {
+    lifeStateTitle: LifeStateTitleSchema,
+    lifeStateDescription: LifeStateDescriptionSchema,
+    lifeStateStartedOn: Type.Optional(DateOnlySchema),
+    lifeStateEndsOn: Type.Optional(DateOnlySchema),
+    currentContext: OnboardingNotesSchema,
+    timeConstraints: OnboardingNotesSchema,
+    interruptionPatterns: OnboardingNotesSchema,
+    rewardPreferences: OnboardingNotesSchema,
+    penaltyPreferences: OnboardingNotesSchema,
+    capabilityFocus: OnboardingNotesSchema,
+  },
+  { additionalProperties: false },
+);
+
 export const ProgressRewardSchema = Type.Object(
   {
     taskId: Type.String({ minLength: 1 }),
@@ -570,6 +608,8 @@ export type TaskEvidenceListResponse = Static<typeof TaskEvidenceListResponseSch
 export type TaskEvidenceMimeType = Static<typeof TaskEvidenceMimeTypeSchema>;
 export type DailyReminder = Static<typeof DailyReminderSchema>;
 export type DailyReminderUpdateInput = Static<typeof DailyReminderUpdateInputSchema>;
+export type OnboardingProfile = Static<typeof OnboardingProfileSchema>;
+export type OnboardingProfileUpdateInput = Static<typeof OnboardingProfileUpdateInputSchema>;
 export type ProgressReward = Static<typeof ProgressRewardSchema>;
 export type ProgressPenalty = Static<typeof ProgressPenaltySchema>;
 export type ProgressSnapshot = Static<typeof ProgressSnapshotSchema>;
@@ -638,6 +678,10 @@ export function isTaskEvidenceListResponse(value: unknown): value is TaskEvidenc
 
 export function isDailyReminder(value: unknown): value is DailyReminder {
   return Value.Check(DailyReminderSchema, value);
+}
+
+export function isOnboardingProfile(value: unknown): value is OnboardingProfile {
+  return Value.Check(OnboardingProfileSchema, value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
