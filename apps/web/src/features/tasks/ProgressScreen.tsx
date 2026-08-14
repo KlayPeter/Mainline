@@ -125,6 +125,12 @@ export function ProgressScreen() {
               </div>
             </section>
           ) : null}
+
+          <section aria-labelledby="backup-heading" className="task-section local-backup">
+            <div className="section-heading"><h2 id="backup-heading">本地备份</h2><span>只在本机生成</span></div>
+            <p className="task-state">下载一份完整 JSON 存档，包含任务、章节、复盘、AI 提案和凭据图片。恢复导入会在后续版本开放。</p>
+            <a className="text-button" download href="/api/system/backup">下载本地备份</a>
+          </section>
         </>
       ) : null}
       {penaltyForEvidence ? <PenaltyEvidenceComposer onClose={() => setPenaltyForEvidence(null)} onFulfilled={() => runAction(penaltyForEvidence.taskId, () => fulfillTaskPenalty(penaltyForEvidence.taskId), "已记录承诺兑现。")} taskId={penaltyForEvidence.taskId} taskTitle={penaltyForEvidence.taskTitle} /> : null}

@@ -32,6 +32,7 @@ flowchart LR
 | `apps/web/src/app/**`、`apps/web/src/styles/**`、`apps/web/src/features/shell/**` | `app-shell` |
 | `apps/api/src/app.ts`、`apps/api/src/index.ts`、`apps/api/src/modules/system/**` | `local-runtime`、`local-persistence` |
 | `apps/api/src/platform/database/**` | `local-persistence` |
+| `apps/api/src/platform/backup/**` | `local-persistence` |
 | `apps/api/src/modules/tasks/**` | `task-management` |
 | `apps/api/src/platform/evidence/**` | `task-management` |
 | `apps/api/src/modules/goals/**` | `chapters-and-goals` |

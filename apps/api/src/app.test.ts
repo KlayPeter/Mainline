@@ -35,4 +35,19 @@ describe("local API", () => {
       migrationCount: 8,
     });
   });
+
+  it("downloads a complete local backup document without requiring cloud storage", async () => {
+    const app = createApp({ databasePath: ":memory:" });
+    apps.push(app);
+
+    const response = await app.inject({ method: "GET", url: "/system/backup" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-disposition"]).toContain("attachment; filename=mainline-backup-");
+    expect(response.json()).toMatchObject({
+      format: "mainline-local-backup",
+      version: 1,
+      data: { tasks: [], chapters: [], goals: [], dailyReviews: [], aiProposals: [], evidence: [] },
+    });
+  });
 });

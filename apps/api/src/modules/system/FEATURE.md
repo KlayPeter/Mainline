@@ -26,6 +26,7 @@ flowchart LR
 - 提供 TypeBox 定义的健康检查响应。
 - 读取安全的本地服务端口配置。
 - 提供不含用户内容的本地存储就绪状态。
+- 提供用户主动下载的本机备份文件。
 
 ### 非目标
 
@@ -46,12 +47,13 @@ flowchart LR
 - `apps/api/src/app.ts`：Fastify 实例和路由注册。
 - `apps/api/src/index.ts`：本地服务启动。
 - `apps/api/src/modules/system/routes.ts`：健康检查 HTTP 边界。
+- `apps/api/src/modules/system/routes.ts`：健康检查、存储状态与本机备份下载 HTTP 边界。
 - `apps/api/src/modules/system/service.ts`：健康检查事实数据。
 - `apps/api/src/modules/system/routes.ts`：健康检查与存储状态 HTTP 边界。
 
 ### 主要测试
 
-- `apps/api/src/app.test.ts`：健康检查响应。
+- `apps/api/src/app.test.ts`：健康检查、存储状态与本机备份响应。
 - `apps/api/src/platform/database/local-database.test.ts`：本地存储迁移。
 
 ## 变更记录
@@ -61,3 +63,4 @@ flowchart LR
 | 2026-08-14 | 完成本地健康检查与存储状态 | `pnpm check` |
 | 2026-08-14 | 共享任务与目标 Repository 实例，供本地应用装配关联校验 | `pnpm check` |
 | 2026-08-14 | 注入本机凭据目录，仅供任务惩罚图片读写 | `pnpm check` |
+| 2026-08-14 | 增加用户主动下载的本机备份端点 | `pnpm check` |

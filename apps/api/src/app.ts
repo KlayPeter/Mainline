@@ -17,6 +17,7 @@ import { TaskRepository } from "./modules/tasks/repository.js";
 import { registerTaskRoutes } from "./modules/tasks/routes.js";
 import { TaskService } from "./modules/tasks/service.js";
 import { createDeepSeekPlanner } from "./platform/ai/deepseek-planner.js";
+import { LocalBackupService } from "./platform/backup/local-backup-service.js";
 import { LocalDatabase } from "./platform/database/local-database.js";
 import { LocalEvidenceStore } from "./platform/evidence/local-evidence-store.js";
 
@@ -32,11 +33,12 @@ export function createApp(options: MainlineAppOptions = {}) {
   const app = Fastify({ logger: false, ...options.fastify });
   const taskRepository = new TaskRepository(database.getConnection());
   const goalRepository = new GoalRepository(database.getConnection());
+  const evidenceStore = new LocalEvidenceStore(options.evidenceDirectory);
   const taskService = new TaskService(taskRepository, goalRepository);
   const taskEvidenceService = new TaskEvidenceService(
     taskRepository,
     new TaskEvidenceRepository(database.getConnection()),
-    new LocalEvidenceStore(options.evidenceDirectory),
+    evidenceStore,
   );
   const goalService = new GoalService(goalRepository);
   const reviewService = new ReviewService(new ReviewRepository(database.getConnection()));
@@ -46,7 +48,7 @@ export function createApp(options: MainlineAppOptions = {}) {
   );
 
   app.addHook("onClose", () => database.close());
-  app.register(registerSystemRoutes, { database });
+  app.register(registerSystemRoutes, { database, backupService: new LocalBackupService(database.getConnection(), evidenceStore) });
   app.register(registerTaskRoutes, { service: taskService, evidenceService: taskEvidenceService });
   app.register(registerGoalRoutes, { service: goalService });
   app.register(registerReviewRoutes, { service: reviewService });

@@ -68,6 +68,7 @@ flowchart LR
 - `apps/web/src/features/goals/api.ts`：任务录入时读取可选的进行中目标。
 - `apps/web/src/features/tasks/ResultComposer.tsx`、`IncompleteComposer.tsx`：成果提交与主动未完成结算。
 - `apps/web/src/features/tasks/ProgressScreen.tsx`：经验、待领取奖励和待兑现承诺。
+- `apps/web/src/features/tasks/ProgressScreen.tsx`：经验、待领取奖励、待兑现承诺与本机备份入口。
 - `apps/web/src/features/tasks/PenaltyEvidenceComposer.tsx`：可选的本机凭据选择与兑现面板。
 - `apps/web/src/features/tasks/api.ts`：浏览器任务 API 客户端。
 - `packages/contracts/src/index.ts`：任务 DTO 与 TypeBox Schema。
@@ -85,3 +86,4 @@ flowchart LR
 | 2026-08-14 | 接入任务结果、经验、奖励领取与本地承诺兑现 | `pnpm check` |
 | 2026-08-14 | 支持用户将任务关联到进行中的目标，并允许在任务形成事实前取消关联 | `pnpm check` |
 | 2026-08-14 | 支持本机惩罚凭据留存、回看与跳过凭据的手动兑现 | `pnpm check` |
+| 2026-08-14 | 在“我的”页提供用户主动下载的本机备份入口 | `pnpm check` |

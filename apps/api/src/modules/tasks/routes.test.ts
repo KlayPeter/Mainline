@@ -241,6 +241,17 @@ describe("task routes", () => {
     const listed = await app.inject({ method: "GET", url: "/evidence" });
     expect(listed.json()).toMatchObject({ evidence: [{ id: evidenceId, originalFilename: "俯卧撑凭据.png" }] });
 
+    const backup = await app.inject({ method: "GET", url: "/system/backup" });
+    expect(backup.json()).toMatchObject({
+      data: {
+        evidence: [{
+          id: evidenceId,
+          taskId,
+          dataBase64: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString("base64"),
+        }],
+      },
+    });
+
     const file = await app.inject({ method: "GET", url: `/evidence/${evidenceId}/file` });
     expect(file.statusCode).toBe(200);
     expect(file.headers["content-type"]).toContain("image/png");
