@@ -129,6 +129,7 @@ const ChapterDescriptionSchema = Type.String({ maxLength: 1000 });
 const GoalTitleSchema = Type.String({ minLength: 1, maxLength: 120 });
 const GoalDefinitionSchema = Type.String({ maxLength: 1000 });
 const GoalMetricSchema = Type.String({ maxLength: 120 });
+const ReviewTextSchema = Type.String({ maxLength: 1500 });
 
 export const TaskSchema = Type.Object(
   {
@@ -292,6 +293,34 @@ export const GoalProgressInputSchema = Type.Object(
   {
     currentValue: Type.Integer({ minimum: 0, maximum: 1_000_000 }),
   },
+  { additionalProperties: false },
+);
+
+export const DailyReviewSchema = Type.Object(
+  {
+    date: DateOnlySchema,
+    progress: ReviewTextSchema,
+    obstacles: ReviewTextSchema,
+    nextStep: ReviewTextSchema,
+    keepAsMemory: Type.Boolean(),
+    createdAt: Type.String({ minLength: 1 }),
+    updatedAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const DailyReviewInputSchema = Type.Object(
+  {
+    progress: ReviewTextSchema,
+    obstacles: ReviewTextSchema,
+    nextStep: ReviewTextSchema,
+    keepAsMemory: Type.Boolean(),
+  },
+  { additionalProperties: false },
+);
+
+export const ReviewListResponseSchema = Type.Object(
+  { reviews: Type.Array(DailyReviewSchema) },
   { additionalProperties: false },
 );
 
@@ -468,6 +497,9 @@ export type GoalMapResponse = Static<typeof GoalMapResponseSchema>;
 export type ChapterCreateInput = Static<typeof ChapterCreateInputSchema>;
 export type GoalCreateInput = Static<typeof GoalCreateInputSchema>;
 export type GoalProgressInput = Static<typeof GoalProgressInputSchema>;
+export type DailyReview = Static<typeof DailyReviewSchema>;
+export type DailyReviewInput = Static<typeof DailyReviewInputSchema>;
+export type ReviewListResponse = Static<typeof ReviewListResponseSchema>;
 export type TaskResultSubmissionInput = Static<typeof TaskResultSubmissionInputSchema>;
 export type TaskIncompleteInput = Static<typeof TaskIncompleteInputSchema>;
 export type ProgressReward = Static<typeof ProgressRewardSchema>;
@@ -522,6 +554,10 @@ export function isProgressSnapshot(value: unknown): value is ProgressSnapshot {
 
 export function isGoalMapResponse(value: unknown): value is GoalMapResponse {
   return Value.Check(GoalMapResponseSchema, value);
+}
+
+export function isReviewListResponse(value: unknown): value is ReviewListResponse {
+  return Value.Check(ReviewListResponseSchema, value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

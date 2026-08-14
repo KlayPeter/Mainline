@@ -3,6 +3,9 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 import { GoalRepository } from "./modules/goals/repository.js";
 import { registerGoalRoutes } from "./modules/goals/routes.js";
 import { GoalService } from "./modules/goals/service.js";
+import { ReviewRepository } from "./modules/reviews/repository.js";
+import { registerReviewRoutes } from "./modules/reviews/routes.js";
+import { ReviewService } from "./modules/reviews/service.js";
 import type { AiPlanningProvider } from "./modules/ai-proposals/provider.js";
 import { AiProposalRepository } from "./modules/ai-proposals/repository.js";
 import { registerAiProposalRoutes } from "./modules/ai-proposals/routes.js";
@@ -25,6 +28,7 @@ export function createApp(options: MainlineAppOptions = {}) {
   const app = Fastify({ logger: false, ...options.fastify });
   const taskService = new TaskService(new TaskRepository(database.getConnection()));
   const goalService = new GoalService(new GoalRepository(database.getConnection()));
+  const reviewService = new ReviewService(new ReviewRepository(database.getConnection()));
   const aiProposalService = new AiProposalService(
     new AiProposalRepository(database.getConnection()),
     options.aiProvider ?? createDeepSeekPlanner(),
@@ -34,6 +38,7 @@ export function createApp(options: MainlineAppOptions = {}) {
   app.register(registerSystemRoutes, { database });
   app.register(registerTaskRoutes, { service: taskService });
   app.register(registerGoalRoutes, { service: goalService });
+  app.register(registerReviewRoutes, { service: reviewService });
   app.register(registerAiProposalRoutes, { service: aiProposalService });
 
   return app;

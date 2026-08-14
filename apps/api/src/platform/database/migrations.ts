@@ -154,6 +154,25 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_006_daily_reviews",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE daily_reviews (
+          date TEXT PRIMARY KEY,
+          progress TEXT NOT NULL,
+          obstacles TEXT NOT NULL,
+          next_step TEXT NOT NULL,
+          keep_as_memory INTEGER NOT NULL CHECK (keep_as_memory IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+
+        CREATE INDEX daily_reviews_by_memory_and_date
+        ON daily_reviews (keep_as_memory, date DESC);
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {

@@ -21,6 +21,7 @@ flowchart LR
 | `local-persistence` | SQLite 本地存储、迁移与存储状态 | active | `apps/api/src/platform/database/FEATURE.md` |
 | `task-management` | Today、任务录入、任务生命周期与数据库规则 | active | `apps/api/src/modules/tasks/FEATURE.md` |
 | `chapters-and-goals` | 多领域章节、目标与用户手动进度 | active | `apps/api/src/modules/goals/FEATURE.md` |
+| `reviews-and-memory` | 每日复盘与用户选择的本地长期记忆 | active | `apps/api/src/modules/reviews/FEATURE.md` |
 | `ai-proposals` | DeepSeek 规划提案、确认与现实中断建议 | active | `apps/api/src/modules/ai-proposals/FEATURE.md` |
 | `shared-contracts` | Web 与 API 共用的领域契约 | active | `packages/contracts/FEATURE.md` |
 
@@ -33,6 +34,7 @@ flowchart LR
 | `apps/api/src/platform/database/**` | `local-persistence` |
 | `apps/api/src/modules/tasks/**` | `task-management` |
 | `apps/api/src/modules/goals/**` | `chapters-and-goals` |
+| `apps/api/src/modules/reviews/**` | `reviews-and-memory` |
 | `apps/web/src/features/tasks/**` | `task-management` |
 | `apps/web/src/features/goals/**` | `chapters-and-goals` |
 | `apps/api/src/modules/ai-proposals/**`、`apps/api/src/platform/ai/**` | `ai-proposals` |
