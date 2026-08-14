@@ -25,6 +25,7 @@ flowchart LR
 
 - 展示全中文、移动端优先的应用外壳。
 - 支持深色和亮色主题。
+- 支持作为 PWA 安装到手机主屏幕，并以独立窗口打开。
 - 提供今天、目标、添加和我的四个一级入口。
 - 在 API 未连接时展示可理解的本地提示。
 - 将“记录”作为任务录入动作，而不是没有内容的独立页面。
@@ -52,6 +53,7 @@ flowchart LR
 - `apps/web/src/app/App.tsx`：应用壳、页面状态和离线降级。
 - `apps/web/src/app/api.ts`：浏览器 API 响应读取与契约验证。
 - `apps/web/src/styles/global.css`：双主题令牌、全局布局和组件样式。
+- `apps/web/src/main.tsx`、`apps/web/public/manifest.webmanifest`、`apps/web/public/service-worker.js`：生产构建下的 PWA 安装信息和应用壳缓存。
 
 ### 主要测试
 
@@ -68,3 +70,4 @@ flowchart LR
 | 2026-08-14 | 增加本机凭据缩略图和已选文件的语义样式 | `pnpm check` |
 | 2026-08-14 | 挂载跨页的本机每日提醒 Provider，不引入后台推送 | `pnpm check` |
 | 2026-08-14 | 挂载首次问卷资料 Provider，顶部阶段名改为用户本机资料 | `pnpm check` |
+| 2026-08-14 | 增加可安装 PWA 外壳和离线应用壳回退，不缓存本地 API 数据 | `pnpm check` |

@@ -31,7 +31,7 @@ flowchart LR
 
 | 路径 | 必须同步的 Feature ID |
 | --- | --- |
-| `apps/web/src/app/**`、`apps/web/src/styles/**`、`apps/web/src/features/shell/**` | `app-shell` |
+| `apps/web/src/app/**`、`apps/web/src/styles/**`、`apps/web/src/features/shell/**`、`apps/web/public/**` | `app-shell` |
 | `apps/api/src/app.ts`、`apps/api/src/index.ts`、`apps/api/src/modules/system/**` | `local-runtime`、`local-persistence` |
 | `apps/api/src/platform/database/**` | `local-persistence` |
 | `apps/api/src/platform/backup/**` | `local-persistence` |
