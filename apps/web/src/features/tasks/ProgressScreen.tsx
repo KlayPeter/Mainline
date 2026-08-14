@@ -6,6 +6,7 @@ import type { ProgressPenalty, ProgressSnapshot, TaskEvidence } from "@mainline/
 import { claimTaskReward, fetchProgress, fetchTaskEvidence, fulfillTaskPenalty, TaskApiError } from "./api";
 import { PenaltyEvidenceComposer } from "./PenaltyEvidenceComposer";
 import { formatTaskDateTime } from "./task-presentation";
+import { ReminderPanel } from "../reminders/ReminderPanel";
 import { ReviewPanel } from "../reviews/ReviewPanel";
 
 type LoadingState = "loading" | "ready" | "error";
@@ -77,6 +78,7 @@ export function ProgressScreen() {
             <strong>{progress.experience}</strong>
           </section>
           <ReviewPanel />
+          <ReminderPanel />
 
           <section aria-labelledby="rewards-heading" className="task-section">
             <div className="section-heading">

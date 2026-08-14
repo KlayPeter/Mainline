@@ -50,7 +50,7 @@ flowchart LR
 ### 主要实现
 
 - `apps/api/src/platform/database/local-database.ts`：SQLite 连接、路径解析和状态读取。
-- `apps/api/src/platform/database/migrations.ts`：最小迁移清单、任务结果/奖励/承诺、章节目标、复盘、任务目标关联与凭据元数据及其执行器。
+- `apps/api/src/platform/database/migrations.ts`：最小迁移清单、任务结果/奖励/承诺、章节目标、复盘、任务目标关联、凭据元数据与每日提醒设置及其执行器。
 - `apps/api/src/modules/tasks/repository.ts`：第一个领域 Repository，在此 Adapter 连接上执行任务 SQL。
 - `apps/api/src/app.ts`：应用生命周期中创建并关闭本地数据库。
 - `apps/api/src/modules/system/routes.ts`：只读存储状态接口。
@@ -71,3 +71,4 @@ flowchart LR
 | 2026-08-14 | 新增任务到目标的可空外键和查询索引 | `pnpm check` |
 | 2026-08-14 | 新增惩罚凭据元数据表；图片文件仍只存本机目录 | `pnpm check` |
 | 2026-08-14 | 新增用户主动下载的完整本机 JSON 备份 | `pnpm check` |
+| 2026-08-14 | 新增唯一的本机每日提醒设置表，并纳入本机备份 | `pnpm check` |

@@ -133,6 +133,7 @@ const GoalMetricSchema = Type.String({ maxLength: 120 });
 const ReviewTextSchema = Type.String({ maxLength: 1500 });
 const EvidenceFilenameSchema = Type.String({ minLength: 1, maxLength: 180 });
 const EvidenceDataSchema = Type.String({ minLength: 4, maxLength: 7_000_000 });
+const ReminderTimeSchema = Type.String({ pattern: "^[0-2][0-9]:[0-5][0-9]$" });
 
 export const TaskEvidenceKindSchema = Type.Literal("penalty");
 export const TaskEvidenceMimeTypeSchema = Type.Union([
@@ -383,6 +384,23 @@ export const TaskEvidenceListResponseSchema = Type.Object(
   { additionalProperties: false },
 );
 
+export const DailyReminderSchema = Type.Object(
+  {
+    enabled: Type.Boolean(),
+    time: ReminderTimeSchema,
+    updatedAt: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
+
+export const DailyReminderUpdateInputSchema = Type.Object(
+  {
+    enabled: Type.Boolean(),
+    time: ReminderTimeSchema,
+  },
+  { additionalProperties: false },
+);
+
 export const ProgressRewardSchema = Type.Object(
   {
     taskId: Type.String({ minLength: 1 }),
@@ -550,6 +568,8 @@ export type TaskEvidence = Static<typeof TaskEvidenceSchema>;
 export type TaskEvidenceCreateInput = Static<typeof TaskEvidenceCreateInputSchema>;
 export type TaskEvidenceListResponse = Static<typeof TaskEvidenceListResponseSchema>;
 export type TaskEvidenceMimeType = Static<typeof TaskEvidenceMimeTypeSchema>;
+export type DailyReminder = Static<typeof DailyReminderSchema>;
+export type DailyReminderUpdateInput = Static<typeof DailyReminderUpdateInputSchema>;
 export type ProgressReward = Static<typeof ProgressRewardSchema>;
 export type ProgressPenalty = Static<typeof ProgressPenaltySchema>;
 export type ProgressSnapshot = Static<typeof ProgressSnapshotSchema>;
@@ -614,6 +634,10 @@ export function isTaskEvidence(value: unknown): value is TaskEvidence {
 
 export function isTaskEvidenceListResponse(value: unknown): value is TaskEvidenceListResponse {
   return Value.Check(TaskEvidenceListResponseSchema, value);
+}
+
+export function isDailyReminder(value: unknown): value is DailyReminder {
+  return Value.Check(DailyReminderSchema, value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

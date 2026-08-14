@@ -32,7 +32,7 @@ describe("local API", () => {
     expect(response.json()).toEqual({
       status: "ready",
       driver: "sqlite",
-      migrationCount: 8,
+      migrationCount: 9,
     });
   });
 
@@ -47,7 +47,7 @@ describe("local API", () => {
     expect(response.json()).toMatchObject({
       format: "mainline-local-backup",
       version: 1,
-      data: { tasks: [], chapters: [], goals: [], dailyReviews: [], aiProposals: [], evidence: [] },
+      data: { tasks: [], chapters: [], goals: [], dailyReviews: [], aiProposals: [], evidence: [], dailyReminder: { enabled: 0, time: "20:00" } },
     });
   });
 });

@@ -22,6 +22,7 @@ export interface LocalBackupDocument {
     chapters: unknown[];
     goals: unknown[];
     dailyReviews: unknown[];
+    dailyReminder: unknown;
     aiProposals: unknown[];
     evidence: Array<Omit<EvidenceBackupRow, "storedFilename"> & { dataBase64: string | null }>;
   };
@@ -57,6 +58,7 @@ export class LocalBackupService {
         chapters: this.database.prepare("SELECT * FROM chapters ORDER BY created_at ASC").all() as unknown[],
         goals: this.database.prepare("SELECT * FROM goals ORDER BY created_at ASC").all() as unknown[],
         dailyReviews: this.database.prepare("SELECT * FROM daily_reviews ORDER BY date ASC").all() as unknown[],
+        dailyReminder: this.database.prepare("SELECT enabled, time, updated_at FROM daily_reminder_settings WHERE id = 1").get() as unknown,
         aiProposals: this.database.prepare("SELECT * FROM ai_proposals ORDER BY created_at ASC").all() as unknown[],
         evidence: evidenceRows.map(({ storedFilename, ...evidence }) => ({
           ...evidence,

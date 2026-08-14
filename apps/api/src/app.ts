@@ -3,6 +3,9 @@ import Fastify, { type FastifyServerOptions } from "fastify";
 import { GoalRepository } from "./modules/goals/repository.js";
 import { registerGoalRoutes } from "./modules/goals/routes.js";
 import { GoalService } from "./modules/goals/service.js";
+import { ReminderRepository } from "./modules/reminders/repository.js";
+import { registerReminderRoutes } from "./modules/reminders/routes.js";
+import { ReminderService } from "./modules/reminders/service.js";
 import { ReviewRepository } from "./modules/reviews/repository.js";
 import { registerReviewRoutes } from "./modules/reviews/routes.js";
 import { ReviewService } from "./modules/reviews/service.js";
@@ -41,6 +44,7 @@ export function createApp(options: MainlineAppOptions = {}) {
     evidenceStore,
   );
   const goalService = new GoalService(goalRepository);
+  const reminderService = new ReminderService(new ReminderRepository(database.getConnection()));
   const reviewService = new ReviewService(new ReviewRepository(database.getConnection()));
   const aiProposalService = new AiProposalService(
     new AiProposalRepository(database.getConnection()),
@@ -52,6 +56,7 @@ export function createApp(options: MainlineAppOptions = {}) {
   app.register(registerTaskRoutes, { service: taskService, evidenceService: taskEvidenceService });
   app.register(registerGoalRoutes, { service: goalService });
   app.register(registerReviewRoutes, { service: reviewService });
+  app.register(registerReminderRoutes, { service: reminderService });
   app.register(registerAiProposalRoutes, { service: aiProposalService });
 
   return app;

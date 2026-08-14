@@ -10,6 +10,7 @@ import { useEffect, useState, type ComponentType } from "react";
 
 import { fetchLocalHealth } from "./api";
 import { GoalsScreen } from "../features/goals/GoalsScreen";
+import { ReminderProvider } from "../features/reminders/ReminderContext";
 import { ProgressScreen } from "../features/tasks/ProgressScreen";
 import { TodayScreen } from "../features/tasks/TodayScreen";
 
@@ -67,7 +68,8 @@ export function App() {
 
   const isToday = activePage === "today";
   return (
-    <div className="app-shell" data-theme={theme}>
+    <ReminderProvider>
+      <div className="app-shell" data-theme={theme}>
       <header className="topbar">
         <div>
           <p className="wordmark">MAINLINE</p>
@@ -128,6 +130,7 @@ export function App() {
           );
         })}
       </nav>
-    </div>
+      </div>
+    </ReminderProvider>
   );
 }

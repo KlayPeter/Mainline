@@ -204,6 +204,22 @@ const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    id: "20260814_009_daily_reminder",
+    apply(database) {
+      database.exec(`
+        CREATE TABLE daily_reminder_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+          time TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+
+        INSERT INTO daily_reminder_settings (id, enabled, time, updated_at)
+        VALUES (1, 0, '20:00', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+      `);
+    },
+  },
 ];
 
 export function applyMigrations(database: DatabaseSync): number {
